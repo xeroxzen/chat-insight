@@ -1,26 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analysis Results</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Analysis Results</h1>
     <h2>Message Counts</h2>
-    <p>Prie♥️: {{ results.participant1_message_count }} messages</p>
+    <p>Prie: {{ results.participant1_message_count }} messages</p>
     <p>Google Jr: {{ results.participant2_message_count }} messages</p>
     <h2>Most Active Day</h2>
     <p>{{ results.most_active_day }}</p>
     <h2>Most Active Time</h2>
-    <p>{{ results.most_active_time }}:00</p>c
+    <p>{{ results.most_active_time }}:00</p>
     <h2>Most Commonly Used Words</h2>
     <ul>
-        {% for word, freq in results.most_common_words %}
-            <li>{{ word }}: {{ freq }}</li>
-        {% endfor %}
+      {% for word, freq in results.most_common_words %}
+      <li>{{ word }}: {{ freq }}</li>
+      {% endfor %}
     </ul>
     <h2>Word Cloud</h2>
-    <img src="{{ results.wordcloud_path }}" alt="Word Cloud">
-</body>
+    <img src="{{ results.wordcloud_path }}" alt="Word Cloud" />
+    <h2>Top Participants</h2>
+    <ul>
+      {% for participant, count in results.top_participants.items() %}
+      <li>{{ participant }}: {{ count }}</li>
+      {% endfor %}
+    </ul>
+    <h2>Top Emojis</h2>
+    <ul>
+      {% for emoji, count in results.emojis.items() %}
+      <li>{{ emoji }}: {{ count }}</li>
+      {% endfor %}
+    </ul>
+    <h2>Top Links</h2>
+    <ul>
+      {% for link, count in results.links.items() %}
+      <li>{{ link }}: {{ count }}</li>
+      {% endfor %}
+    </ul>
+    <h2>First Message</h2>
+    <p>{{ results.first_message_date }}</p>
+    <h2>Last Message</h2>
+    <p>{{ results.last_message_date }}</p>
+  </body>
 </html>
