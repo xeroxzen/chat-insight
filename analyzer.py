@@ -7,7 +7,6 @@ import nltk
 from nltk.corpus import stopwords
 import re
 
-# Initialize NLTK resources
 nltk.download('stopwords')
 
 def analyze_chat_log(csv_file_path):
@@ -31,7 +30,7 @@ def analyze_chat_log(csv_file_path):
     df.dropna(subset=['Message'], inplace=True)
     
     # 1. Comparison of messages sent between two participants
-    participant1 = 'Prie♥️'  
+    participant1 = 'Prie'  
     participant2 = 'Google Jr' 
     
     participant1_messages = df[df['Sender'] == participant1]
@@ -95,31 +94,10 @@ def analyze_chat_log(csv_file_path):
     
     # Plotting the participants
     top_participants = df['Sender'].value_counts().nlargest(2)
-    # plt.figure(figsize=(10, 6))
-    # sns.barplot(x=top_participants.values, y=top_participants.index, palette='viridis')
-    # plt.title('Top Participants')
-    # plt.xlabel('Number of Messages')
-    # plt.ylabel('Participant')
-    # plt.show()
     
     # Message count by hour
     hourly_counts = df['Hour'].value_counts().sort_index()
-    # plt.figure(figsize=(10, 6))
-    # sns.lineplot(x=hourly_counts.index, y=hourly_counts.values, marker='o')
-    # plt.title('Messages Sent by Hour')
-    # plt.xlabel('Hour of the Day')
-    # plt.ylabel('Number of Messages')
-    # plt.xticks(range(0, 24))
-    # plt.grid(True)
-    # plt.show()
     
-    # Generate a word cloud
-    # wordcloud = WordCloud(width=800, height=400, background_color='white').generate(all_messages)
-    # plt.figure(figsize=(10, 6))
-    # plt.imshow(wordcloud, interpolation='bilinear')
-    # plt.axis('off')
-    # plt.title('Word Cloud of Commonly Used Words')
-    # plt.show()
     
     results = {
         "total_messages": len(df),
