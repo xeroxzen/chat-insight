@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results</title>
+</head>
+<body>
+    <h1>Analysis Results</h1>
+    <h2>Message Counts</h2>
+    <p>Prie♥️: {{ results.participant1_message_count }} messages</p>
+    <p>Google Jr: {{ results.participant2_message_count }} messages</p>
+    <h2>Most Active Day</h2>
+    <p>{{ results.most_active_day }}</p>
+    <h2>Most Active Time</h2>
+    <p>{{ results.most_active_time }}:00</p>c
+    <h2>Most Commonly Used Words</h2>
+    <ul>
+        {% for word, freq in results.most_common_words %}
+            <li>{{ word }}: {{ freq }}</li>
+        {% endfor %}
+    </ul>
+    <h2>Word Cloud</h2>
+    <img src="{{ results.wordcloud_path }}" alt="Word Cloud">
+</body>
+</html>
