@@ -98,6 +98,9 @@ def analyze_chat_log(csv_file_path):
     # Message count by hour
     hourly_counts = df['Hour'].value_counts().sort_index()
     
+    # Average number of messages sent per day
+    avg_messages_per_day = df['Date'].value_counts().mean()
+    
     
     results = {
         "total_messages": len(df),
@@ -110,7 +113,8 @@ def analyze_chat_log(csv_file_path):
         "first_message_date": first_message_date.date(),
         "last_message_date": last_message_date.date(),
         "emojis": emojis.to_dict(),
-        "links": links.to_dict()
+        "links": links.to_dict(),
+        "avg_messages_per_day": avg_messages_per_day
     }
     
     return results
