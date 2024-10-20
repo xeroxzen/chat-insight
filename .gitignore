@@ -3,3 +3,6 @@ __pycache__
 *.csv
 *.txt
 venv
+
+.DS_Store
+.code-workspace
