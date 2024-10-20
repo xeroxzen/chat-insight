@@ -29,9 +29,12 @@ def analyze_chat_log(csv_file_path):
     df['Message'] = df['Message'].astype(str)
     df.dropna(subset=['Message'], inplace=True)
     
-    # 1. Comparison of messages sent between two participants
-    participant1 = 'Prie'  
-    participant2 = 'Google Jr' 
+    # 1. Comparison of messages sent between two participants. Get names from the chat
+    participants = df['Sender'].unique()
+    participant1 = participants[0]
+    participant2 = participants[1]
+    
+    print(participant1)
     
     participant1_messages = df[df['Sender'] == participant1]
     participant2_messages = df[df['Sender'] == participant2]
@@ -105,6 +108,8 @@ def analyze_chat_log(csv_file_path):
     results = {
         "total_messages": len(df),
         "unique_senders": df['Sender'].nunique(),
+        "participant1_message_count": participant1_message_count,
+        "participant2_message_count": participant2_message_count,
         "most_active_day": most_active_day.date(),
         "most_active_time": f"{most_active_time}:00",
         "most_common_words": most_common_words,
