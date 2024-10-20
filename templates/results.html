@@ -4,9 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analysis Results</title>
+    <style>
+      body {
+        background-color: #f0f8ff; /* Light background for contrast */
+        color: #333; /* Dark text for readability */
+        font-family: Arial, sans-serif;
+      }
+      h1 {
+        color: #069494; /* Teal color for the main heading */
+      }
+      h2 {
+        color: #069494; /* Teal color for subheadings */
+      }
+      p {
+        margin: 0.5em 0;
+      }
+      .description {
+        margin: 20px 0;
+        font-size: 1.1em;
+        color: #555; /* Slightly lighter text for description */
+      }
+    </style>
   </head>
   <body>
-    <h1>Analysis Results</h1>
+    <h1>Chat Insight</h1> <!-- Updated heading -->
+    <p class="description">This app provides insights into chat interactions, analyzing message counts, active times, and participant engagement to enhance communication strategies.</p> <!-- Added description -->
     <h2>Message Counts</h2>
     <p>Prie: {{ results.participant1_message_count }} messages</p>
     <p>Google Jr: {{ results.participant2_message_count }} messages</p>
