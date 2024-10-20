@@ -4,15 +4,65 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Insight</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f8ff;
+        color: #333;
+        text-align: left;
+        padding: 20px;
+      }
+      h1 {
+        color: #008080; /* Teal color */
+        font-size: 2.5em;
+      }
+      p {
+        font-size: 1em;
+        margin: 20px 0;
+      }
+      form {
+        margin-top: 20px;
+        text-align: center;
+      }
+      input[type="file"] {
+        padding: 10px;
+        border: 2px solid #008080;
+        border-radius: 5px;
+      }
+      button {
+        background-color: #008080;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+      }
+      button:hover {
+        background-color: #006666;
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+      }
+    </style>
   </head>
   <body>
     <h1>Chat Insight</h1>
+    <p>
+      ChatInsight is a powerful web application that transforms your WhatsApp
+      conversations into meaningful insights. Simply upload your chat export
+      file, and ChatInsight will instantly provide detailed analysis and
+      beautiful visualizations—helping you uncover patterns like message counts,
+      most active days and times, frequently used words, and more.
+    </p>
+    <p>Turn your chats into data-driven stories with ease!</p>
     <form action="/upload" method="post" enctype="multipart/form-data">
       <input type="file" name="file" accept=".zip" required />
       <button type="submit">Upload and Analyze</button>
     </form>
     {% if error %}
-    <p style="color: red">{{ error }}</p>
+    <p class="error">{{ error }}</p>
     {% endif %}
   </body>
 </html>
