@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analysis Results</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <style>
       body {
         background-color: #f0f8ff; /* Light background for contrast */
@@ -13,11 +14,21 @@
       h1 {
         color: #069494; /* Teal color for the main heading */
       }
-      h2 {
-        color: #069494; /* Teal color for subheadings */
+      .container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 20px;
       }
-      p {
-        margin: 0.5em 0;
+      .card {
+        background-color: rgb(119, 201, 191);
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        margin: 10px;
+        padding: 15px;
+        flex: 1 1 calc(30% - 20px); /* Responsive card width */
+        box-sizing: border-box;
       }
       .description {
         margin: 20px 0;
@@ -27,46 +38,70 @@
     </style>
   </head>
   <body>
-    <h1>Chat Insight</h1> <!-- Updated heading -->
-    <p class="description">This app provides insights into chat interactions, analyzing message counts, active times, and participant engagement to enhance communication strategies.</p> <!-- Added description -->
-    <h2>Message Counts</h2>
-    <p>Prie: {{ results.participant1_message_count }} messages</p>
-    <p>Google Jr: {{ results.participant2_message_count }} messages</p>
-    <h2>Most Active Day</h2>
-    <p>{{ results.most_active_day }}</p>
-    <h2>Most Active Time</h2>
-    <p>{{ results.most_active_time }}:00</p>
-    <h2>Most Commonly Used Words</h2>
-    <ul>
-      {% for word, freq in results.most_common_words %}
-      <li>{{ word }}: {{ freq }}</li>
-      {% endfor %}
-    </ul>
-    <h2>Word Cloud</h2>
-    <img src="{{ results.wordcloud_path }}" alt="Word Cloud" />
-    <h2>Top Participants</h2>
-    <ul>
-      {% for participant, count in results.top_participants.items() %}
-      <li>{{ participant }}: {{ count }}</li>
-      {% endfor %}
-    </ul>
-    <h2>Top Emojis</h2>
-    <ul>
-      {% for emoji, count in results.emojis.items() %}
-      <li>{{ emoji }}: {{ count }}</li>
-      {% endfor %}
-    </ul>
-    <h2>Top Links</h2>
-    <ul>
-      {% for link, count in results.links.items() %}
-      <li>{{ link }}: {{ count }}</li>
-      {% endfor %}
-    </ul>
-    <h2>First Message</h2>
-    <p>{{ results.first_message_date }}</p>
-    <h2>Last Message</h2>
-    <p>{{ results.last_message_date }}</p>
-    <h2>Average messages per day</h2>
-    <p>{{ results.avg_messages_per_day }}</p>
+    <h1>Chat Insight</h1>
+    <p class="description">This app provides insights into chat interactions, analyzing message counts, active times, and participant engagement to enhance communication strategies.</p>
+    <div class="container">
+      <div class="card">
+        <h2>Message Counts</h2>
+        <p>Prie: {{ results.participant1_message_count }} messages</p>
+        <p>Google Jr: {{ results.participant2_message_count }} messages</p>
+      </div>
+      <div class="card">
+        <h2>Most Active Day</h2>
+        <p>{{ results.most_active_day }}</p>
+      </div>
+      <div class="card">
+        <h2>Most Active Time</h2>
+        <p>{{ results.most_active_time }}:00</p>
+      </div>
+      <div class="card">
+        <h2>Most Commonly Used Words</h2>
+        <ul>
+          {% for word, freq in results.most_common_words %}
+          <li>{{ word }}: {{ freq }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Word Cloud</h2>
+        <img src="{{ results.wordcloud_path }}" alt="Word Cloud" class="img-fluid" />
+      </div>
+      <div class="card">
+        <h2>Top Participants</h2>
+        <ul>
+          {% for participant, count in results.top_participants.items() %}
+          <li>{{ participant }}: {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Top Emojis</h2>
+        <ul>
+          {% for emoji, count in results.emojis.items() %}
+          <li>{{ emoji }}: {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Top Links</h2>
+        <ul>
+          {% for link, count in results.links.items() %}
+          <li>{{ link }}: {{ count }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card">
+        <h2>First Message</h2>
+        <p>{{ results.first_message_date }}</p>
+      </div>
+      <div class="card">
+        <h2>Last Message</h2>
+        <p>{{ results.last_message_date }}</p>
+      </div>
+      <div class="card">
+        <h2>Average Messages Per Day</h2>
+        <p>{{ results.avg_messages_per_day }}</p>
+      </div>
+    </div>
   </body>
 </html>
