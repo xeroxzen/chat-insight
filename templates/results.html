@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analysis Results</title>
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
       body {
         background-color: #f0f8ff; /* Light background for contrast */
@@ -39,7 +42,11 @@
   </head>
   <body>
     <h1>Chat Insight</h1>
-    <p class="description">This app provides insights into chat interactions, analyzing message counts, active times, and participant engagement to enhance communication strategies.</p>
+    <p class="description">
+      This app provides insights into chat interactions, analyzing message
+      counts, active times, and participant engagement to enhance communication
+      strategies.
+    </p>
     <div class="container">
       <div class="card">
         <h2>Message Counts</h2>
@@ -48,11 +55,11 @@
       </div>
       <div class="card">
         <h2>Most Active Day</h2>
-        <p>{{ results.most_active_day }}</p>
+        <p>{{ results.most_active_day.strftime('%d %B %Y') }}</p>
       </div>
       <div class="card">
         <h2>Most Active Time</h2>
-        <p>{{ results.most_active_time }}:00</p>
+        <p>{{ results.most_active_time }} hours</p>
       </div>
       <div class="card">
         <h2>Most Commonly Used Words</h2>
@@ -64,15 +71,19 @@
       </div>
       <div class="card">
         <h2>Word Cloud</h2>
-        <img src="{{ results.wordcloud_path }}" alt="Word Cloud" class="img-fluid" />
+        <img
+          src="{{ results.wordcloud_path }}"
+          alt="Word Cloud"
+          class="img-fluid"
+        />
       </div>
       <div class="card">
         <h2>Top Participants</h2>
-        <ul>
+        <ol>
           {% for participant, count in results.top_participants.items() %}
           <li>{{ participant }}: {{ count }}</li>
           {% endfor %}
-        </ul>
+        </ol>
       </div>
       <div class="card">
         <h2>Top Emojis</h2>
