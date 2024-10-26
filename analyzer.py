@@ -9,10 +9,18 @@ import re
 
 nltk.download('stopwords')
 
-def analyze_chat_log(csv_file_path):
-    df = pd.read_csv(csv_file_path)
+def analyze_chat_log(csv_file_path: str) -> dict:
+    """Analyze chats into various statistics"""
     
-     # Strip any leading/trailing spaces from the column headers
+    # Error handling for file reading
+    try:
+        df = pd.read_csv(csv_file_path)
+    except FileNotFoundError:
+        raise ValueError(f"File not found: {csv_file_path}")
+    except pd.errors.EmptyDataError:
+        raise ValueError("No data found in the file.")
+    
+    # Strip any leading/trailing spaces from the column headers
     df.columns = df.columns.str.strip()
 
     # Stripping spaces from the Date column
@@ -28,83 +36,46 @@ def analyze_chat_log(csv_file_path):
     # Converting 'Message' column to string and removing NaN values
     df['Message'] = df['Message'].astype(str)
     df.dropna(subset=['Message'], inplace=True)
-    
-    # 1. Comparison of messages sent between two participants. Get names from the chat
+
+    # Ensure there are at least two participants
     participants = df['Sender'].unique()
-    participant1 = participants[0]
-    participant2 = participants[1]
-    
-    print(participant1)
-    
-    participant1_messages = df[df['Sender'] == participant1]
-    participant2_messages = df[df['Sender'] == participant2]
-    
-    participant1_message_count = len(participant1_messages)
-    participant2_message_count = len(participant2_messages)
-    
-    print(f"\nComparison of messages sent between {participant1} and {participant2}:")
-    print(f"{participant1}: {participant1_message_count} messages")
-    print(f"{participant2}: {participant2_message_count} messages")
-    
-    # 2. Day with the most activity
+    if len(participants) < 2:
+        raise ValueError("Not enough participants found in the chat log.")
+
+    participant1, participant2 = participants[:2]
+
+    # Message counts
+    participant1_message_count = len(df[df['Sender'] == participant1])
+    participant2_message_count = len(df[df['Sender'] == participant2])
+
+    # Day with the most activity
     most_active_day = df['Date'].value_counts().idxmax()
-    print("\nDay with the most activity:", most_active_day.date())
-    
-    # 3. Most active time during the day
+
+    # Most active time during the day
     df['Hour'] = df['Time'].apply(lambda x: x.hour)
     most_active_time = df['Hour'].value_counts().idxmax()
-    print("\nMost active time during the day:", most_active_time, ":00")
 
-    # 4. Commonly used words
+    # Commonly used words
     stop_words = set(stopwords.words('english'))
-    def preprocess_message(message):
-        # Removing punctuation and converting all words to lowercase
-        message = re.sub(r'[^\w\s]', '', message).lower()
-        return message
-    
-    # 5 Date for the very first message
-    first_message_date = df['Date'].min()
-    
-    # 6. Date for the very last message
-    last_message_date = df['Date'].max()
-    
-    # 7. Top emojis
+    def preprocess_message(message: str) -> str:
+        return re.sub(r'[^\w\s]', '', message).lower()
+
+    # Top emojis and links
     emojis = df['Message'].str.extractall(r'([\U0001f600-\U0001f650])')[0].value_counts().head(5)
-    
-    # 8. Top links
     links = df['Message'].str.extractall(r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)')[0].value_counts().head(5)
 
-    # Combining all messages into a single string
+    # Tokenizing and counting words
     all_messages = ' '.join(df['Message'].apply(preprocess_message))
-    
-    # Tokenizing the string into words. Magic happens here!
-    words = all_messages.split()
-    
-    # Removing stopwords
-    words = [word for word in words if word not in stop_words]
-    
-    # Counting the frequency of each word using built-in Counter for efficiency
+    words = [word for word in all_messages.split() if word not in stop_words]
     word_freq = Counter(words)
-    
-    # Get the 20 most common words. You can filter out some words if needed e.g. yes, no, ok, etc.
     most_common_words = word_freq.most_common(20)
-    print("\nMost Commonly Used Words:")
-    for word, freq in most_common_words:
-        print(f"{word}: {freq}")
-    
+
     # Getting the top participants
     top_participants = df['Sender'].value_counts().nlargest(2)
-    
-    # Plotting the participants
-    top_participants = df['Sender'].value_counts().nlargest(2)
-    
-    # Message count by hour
-    hourly_counts = df['Hour'].value_counts().sort_index()
-    
+
     # Average number of messages sent per day
     avg_messages_per_day = df['Date'].value_counts().mean()
-    
-    
+
     results = {
         "total_messages": len(df),
         "unique_senders": df['Sender'].nunique(),
@@ -114,12 +85,11 @@ def analyze_chat_log(csv_file_path):
         "most_active_time": f"{most_active_time}:00",
         "most_common_words": most_common_words,
         "top_participants": top_participants.to_dict(),
-        "hourly_counts": hourly_counts.to_dict(),
-        "first_message_date": first_message_date.date(),
-        "last_message_date": last_message_date.date(),
+        "first_message_date": df['Date'].min().date(),
+        "last_message_date": df['Date'].max().date(),
         "emojis": emojis.to_dict(),
         "links": links.to_dict(),
         "avg_messages_per_day": avg_messages_per_day
     }
-    
+
     return results
