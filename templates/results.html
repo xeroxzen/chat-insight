@@ -97,21 +97,21 @@
         <h2>Top Links</h2>
         <ul>
           {% for link, count in results.links.items() %}
-          <li>{{ link }}: {{ count }}</li>
+          <a href="{{ link }}" target="_blank">{{ link }}</a>
           {% endfor %}
         </ul>
       </div>
       <div class="card">
         <h2>First Message</h2>
-        <p>{{ results.first_message_date }}</p>
+        <p>{{ results.first_message_date.strftime('%d %B %Y') }}</p>
       </div>
       <div class="card">
         <h2>Last Message</h2>
-        <p>{{ results.last_message_date }}</p>
+        <p>{{ results.last_message_date.strftime('%d %B %Y') }}</p>
       </div>
       <div class="card">
         <h2>Average Messages Per Day</h2>
-        <p>{{ results.avg_messages_per_day }}</p>
+        <p>{{ results.avg_messages_per_day|round }}</p>
       </div>
     </div>
   </body>
