@@ -153,8 +153,6 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.savefig(avg_messages_graph_image_path)
     plt.close()
     
-    # Line chart of frequency of messages of a 30 day period
-    
 
     return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path
 
