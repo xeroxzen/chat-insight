@@ -89,10 +89,56 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     
     if not os.path.exists('visuals'):
         os.makedirs('visuals')
-    wordcloud_image_path = f'static/visuals/wordcloud.png'
+    wordcloud_image_path = 'static/visuals/wordcloud.png'
     wordcloud.to_file(wordcloud_image_path)
     
-    return wordcloud_image_path
+    """
+    Who sends the first message of the day more often.
+    
+    A new day starts at 6am. So first step is to combine Date and Time into a single datetime column, then filter the date part for grouping, and proceed to find the first message
+    """
+    # Filter messages starting from 6 AM and find the first message of each day
+    df['Time'] = pd.to_datetime(df['Time'], format='%H:%M:%S').dt.time
+    df_filtered = df[df['Time'] >= pd.to_datetime('06:00:00').time()]
+    first_messages = df_filtered.groupby('Date').first()
+    first_sender_counts = first_messages['Sender'].value_counts()
+
+    # Create a bar graph
+    plt.figure(figsize=(10, 6))
+    first_sender_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
+    plt.title('First Message of the Day by Sender (After 6 AM)')
+    plt.xlabel('Sender')
+    plt.ylabel('Number of First Messages')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y')
+    plt.tight_layout()
+
+    # Save the figure
+    bar_graph_image_path = 'static/visuals/first_message_sender.png'
+    os.makedirs(os.path.dirname(bar_graph_image_path), exist_ok=True)
+    plt.savefig(bar_graph_image_path)
+    plt.close()
+    
+    # Who says I love you more
+    love_counts = df[df['Message'].str.contains('i love you', case=False)]['Sender'].value_counts()
+    
+    # Create a bar graph
+    plt.figure(figsize=(10, 6))
+    love_counts.plot(kind='bar', color=['red', 'pink', 'orange', 'skyblue', 'purple'])
+    plt.title('Number of Times "I Love You" Sent by Sender')
+    plt.xlabel('Sender')
+    plt.ylabel('Number of Times "I Love You" Sent')
+    plt.xticks(rotation=45)
+    plt.grid(axis='y')
+    plt.tight_layout()
+    
+    # Save the figure
+    love_graph_image_path = 'static/visuals/love_counts.png'
+    os.makedirs(os.path.dirname(love_graph_image_path), exist_ok=True)
+    plt.savefig(love_graph_image_path)
+    plt.close()
+
+    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path
 
 def analyze_chat_log(csv_file_path: str) -> dict:
     """Analyze chats into various statistics"""
@@ -101,7 +147,7 @@ def analyze_chat_log(csv_file_path: str) -> dict:
     
     participant1_message_count, participant2_message_count = analyze_participants(df)
     analysis_results = perform_analysis(df)
-    wordcloud_image_path = generate_visualizations(df)
+    wordcloud_image_path, bar_graph_image_path, love_graph_image_path = generate_visualizations(df)
 
     results = {
         "total_messages": len(df),
@@ -109,7 +155,8 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         "participant1_message_count": participant1_message_count,
         "participant2_message_count": participant2_message_count,
         **analysis_results,
-        "wordcloud": wordcloud_image_path
+        "wordcloud": wordcloud_image_path,
+        "first_message_sender": bar_graph_image_path
     }
 
     return results
