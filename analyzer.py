@@ -137,8 +137,26 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     os.makedirs(os.path.dirname(love_graph_image_path), exist_ok=True)
     plt.savefig(love_graph_image_path)
     plt.close()
+    
+    # Average messages per day
+    avg_messages_per_day = df['Date'].value_counts().mean()
+    plt.figure(figsize=(10, 6))
+    plt.bar(['Average Messages per Day'], [avg_messages_per_day])
+    plt.title('Average Messages per Day')
+    plt.xlabel('')
+    plt.ylabel('Number of Messages')
+    plt.tight_layout()
 
-    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path
+    # Save the figure
+    avg_messages_graph_image_path = 'static/visuals/average_messages_per_day.png'
+    os.makedirs(os.path.dirname(avg_messages_graph_image_path), exist_ok=True)
+    plt.savefig(avg_messages_graph_image_path)
+    plt.close()
+    
+    # Line chart of frequency of messages of a 30 day period
+    
+
+    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path
 
 def analyze_chat_log(csv_file_path: str) -> dict:
     """Analyze chats into various statistics"""
@@ -147,7 +165,7 @@ def analyze_chat_log(csv_file_path: str) -> dict:
     
     participant1_message_count, participant2_message_count = analyze_participants(df)
     analysis_results = perform_analysis(df)
-    wordcloud_image_path, bar_graph_image_path, love_graph_image_path = generate_visualizations(df)
+    wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path = generate_visualizations(df)
 
     results = {
         "total_messages": len(df),
@@ -156,7 +174,9 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         "participant2_message_count": participant2_message_count,
         **analysis_results,
         "wordcloud": wordcloud_image_path,
-        "first_message_sender": bar_graph_image_path
+        "first_message_sender": bar_graph_image_path,
+        "love_counts": love_graph_image_path,
+        "average_messages_per_day": avg_messages_graph_image_path
     }
 
     return results
