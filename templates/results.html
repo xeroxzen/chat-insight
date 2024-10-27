@@ -33,6 +33,12 @@
         flex: 1 1 calc(30% - 20px); /* Responsive card width */
         box-sizing: border-box;
       }
+      .visualization {
+        background-color: white;
+        width: 100%;
+        padding: 20px;
+        flex-wrap: wrap;
+      }
       .description {
         margin: 20px 0;
         font-size: 1.1em;
@@ -69,14 +75,7 @@
           {% endfor %}
         </ul>
       </div>
-      <div class="card">
-        <h2>Word Cloud</h2>
-        <img
-          src="{{ results.wordcloud_path }}"
-          alt="Word Cloud"
-          class="img-fluid"
-        />
-      </div>
+
       <div class="card">
         <h2>Top Participants</h2>
         <ol>
@@ -112,6 +111,25 @@
       <div class="card">
         <h2>Average Messages Per Day</h2>
         <p>{{ results.avg_messages_per_day|round }}</p>
+      </div>
+    </div>
+    <!-- Here starts visualizations in image format -->
+    <div class="container">
+      <div class="visualization">
+        <h2>Word Cloud of Frequently Used Words</h2>
+        <img
+          src="/static/visuals/wordcloud.png"
+          alt="Word Cloud"
+          class="img-fluid"
+        />
+      </div>
+      <div class="visualization">
+        <h2>Average Messages Sent per Day</h2>
+        <img
+          src="/static/visuals/average_messages_per_day.png"
+          alt="Average Messages Sent per Day"
+          class="img-fluid"
+        />
       </div>
     </div>
   </body>
