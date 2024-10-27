@@ -2,10 +2,11 @@ import pandas as pd
 from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
-from wordcloud import WordCloud
+from wordcloud import WordCloud, STOPWORDS
 import nltk
 from nltk.corpus import stopwords
 import re
+import os
 
 nltk.download('stopwords')
 
@@ -29,6 +30,9 @@ def analyze_chat_log(csv_file_path: str) -> dict:
     # Converting 'Date' and 'Time' columns to datetime
     df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
     df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S', errors='coerce').dt.time
+    
+    # Remove words not part of the chat e.g. 'joined', 'left', 'removed', 'changed', 'image omitted', 'video omitted'
+    df = df[~df['Message'].astype(str).str.contains('joined|left|removed|changed|image omitted|video omitted|video call|voice call|audio omitted|missed voice|missed video|google jr', case=False)]
 
     # Dropping rows with NaT in 'Date' or NaT in 'Time'
     df.dropna(subset=['Date', 'Time'], inplace=True)
@@ -69,6 +73,16 @@ def analyze_chat_log(csv_file_path: str) -> dict:
     words = [word for word in all_messages.split() if word not in stop_words]
     word_freq = Counter(words)
     most_common_words = word_freq.most_common(20)
+    
+    # Generate a Word Cloud
+    wordcloud = WordCloud(width=800, height=400, background_color='white', stopwords=STOPWORDS, max_words=200).generate(all_messages)
+    
+    # Save the Word Cloud to a file(found in a folder named visuals)
+    if not os.path.exists('visuals'):
+        os.makedirs('visuals')
+    # random_number = random.randint(1, 1000)
+    wordcloud_image_path = f'static/visuals/wordcloud.png'
+    wordcloud.to_file(wordcloud_image_path)
 
     # Getting the top participants
     top_participants = df['Sender'].value_counts().nlargest(2)
@@ -89,7 +103,10 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         "last_message_date": df['Date'].max().date(),
         "emojis": emojis.to_dict(),
         "links": links.to_dict(),
-        "avg_messages_per_day": avg_messages_per_day
+        "avg_messages_per_day": avg_messages_per_day,
+        
+        # Visuals go here
+        'wordcloud': wordcloud_image_path
     }
 
     return results
