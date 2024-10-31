@@ -19,9 +19,14 @@
       }
       .container {
         display: flex;
-        flex-wrap: wrap;
         justify-content: space-between;
-        padding: 20px;
+        flex-wrap: wrap;
+      }
+      .child {
+        flex: 1;
+        margin: 10px;
+        min-width: 200px;
+        box-sizing: border-box;
       }
       .card {
         background-color: rgb(119, 201, 191);
@@ -35,9 +40,13 @@
       }
       .visualization {
         background-color: white;
-        width: 100%;
+        width: 45%;
         padding: 20px;
-        flex-wrap: wrap;
+        display: flex;
+        flex-direction: column;
+        align-items: left;
+        padding: 20px;
+        margin: 10px;
       }
       .description {
         margin: 20px 0;
@@ -115,7 +124,10 @@
     </div>
     <!-- Here starts visualizations in image format -->
     <div class="container">
-      <div class="visualization">
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/wordcloud.png';"
+      >
         <h2>Word Cloud of Frequently Used Words</h2>
         <img
           src="/static/visuals/wordcloud.png"
@@ -123,11 +135,81 @@
           class="img-fluid"
         />
       </div>
-      <div class="visualization">
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/average_messages_per_day.png'"
+      >
         <h2>Average Messages Sent per Day</h2>
         <img
           src="/static/visuals/average_messages_per_day.png"
           alt="Average Messages Sent per Day"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/first_message_sender.png'"
+      >
+        <h2>First Message Sender</h2>
+        <img
+          src="/static/visuals/first_message_sender.png"
+          alt="First Message Sender"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/love_counts.png'"
+      >
+        <h2>Love Counts</h2>
+        <img
+          src="/static/visuals/love_counts.png"
+          alt="Love Counts"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/sentiment_counts.png'"
+      >
+        <h2>Sentiment Counts</h2>
+        <img
+          src="/static/visuals/sentiment_counts.png"
+          alt="Sentiment Counts"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/links_shared_by_sender.png'"
+      >
+        <h2>Links Shared by Each Sender</h2>
+        <img
+          src="/static/visuals/links_shared_by_sender.png"
+          alt="Links Shared by Each Sender"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/top_emojis.png'"
+      >
+        <h2>Top Emojis</h2>
+        <img
+          src="/static/visuals/top_emojis.png"
+          alt="Top Emojis"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick=""
+        window.location.href="/static/visuals/messages_count_per_sender.png"
+      >
+        <h2>Messages sent per user</h2>
+        <img
+          src="/static/visuals/messages_count_per_sender.png"
+          alt="Total messages per user"
           class="img-fluid"
         />
       </div>
