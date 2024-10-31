@@ -7,6 +7,7 @@ import nltk
 from nltk.corpus import stopwords
 import re
 import os
+from textblob import TextBlob
 
 nltk.download('stopwords')
 
@@ -29,9 +30,9 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
     df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S', errors='coerce').dt.time
     df = df[~df['Message'].astype(str).str.contains('joined|left|removed|changed|image omitted|video omitted|video call|voice call|audio omitted|missed voice|missed video|google jr', case=False)]
-    df.dropna(subset=['Date', 'Time'], inplace=True)
-    df['Message'] = df['Message'].astype(str)
-    df.dropna(subset=['Message'], inplace=True)
+    df = df.dropna(subset=['Date', 'Time'])
+    df.loc[:, 'Message'] = df['Message'].astype(str)
+    df = df.dropna(subset=['Message'])
     return df
 
 def analyze_participants(df: pd.DataFrame) -> tuple:
@@ -49,6 +50,12 @@ def analyze_participants(df: pd.DataFrame) -> tuple:
 def preprocess_message(message: str) -> str:
     """Preprocess a message by removing non-word characters and converting to lowercase."""
     return re.sub(r'[^\w\s]', '', message).lower()
+
+def analyze_sentiment(df: pd.DataFrame) -> pd.DataFrame:
+    """Analyze sentiment of messages in the chat log."""
+    df['Sentiment'] = df['Message'].apply(lambda msg: TextBlob(msg).sentiment.polarity)
+    df['Sentiment_Label'] = df['Sentiment'].apply(lambda x: 'Positive' if x > 0 else ('Negative' if x < 0 else 'Neutral'))
+    return df
 
 def perform_analysis(df: pd.DataFrame) -> dict:
     """Perform various analyses on the chat log."""
@@ -71,6 +78,10 @@ def perform_analysis(df: pd.DataFrame) -> dict:
     word_freq = Counter(words)
     most_common_words = word_freq.most_common(20)
     
+    # Analyze sentiment
+    df = analyze_sentiment(df)
+    sentiment_counts = df['Sentiment_Label'].value_counts().to_dict()
+    
     return {
         "most_active_day": most_active_day.date(),
         "most_active_time": f"{most_active_time}:00",
@@ -81,6 +92,7 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         "avg_messages_per_day": avg_messages_per_day,
         "emojis": emojis.to_dict(),
         "links": links.to_dict(),
+        "sentiment_counts": sentiment_counts,
     }
 
 def generate_visualizations(df: pd.DataFrame) -> str:
@@ -124,7 +136,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     
     # Create a bar graph
     plt.figure(figsize=(10, 6))
-    love_counts.plot(kind='bar', color=['red', 'pink', 'orange', 'skyblue', 'purple'])
+    love_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
     plt.title('Number of Times "I Love You" Sent by Sender')
     plt.xlabel('Sender')
     plt.ylabel('Number of Times "I Love You" Sent')
@@ -138,13 +150,15 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.savefig(love_graph_image_path)
     plt.close()
     
-    # Average messages per day
-    avg_messages_per_day = df['Date'].value_counts().mean()
+    # Average messages per day by sender
+    avg_messages_per_day_by_sender = df.groupby('Sender')['Date'].value_counts().groupby('Sender').mean()
+    
     plt.figure(figsize=(10, 6))
-    plt.bar(['Average Messages per Day'], [avg_messages_per_day])
-    plt.title('Average Messages per Day')
-    plt.xlabel('')
-    plt.ylabel('Number of Messages')
+    avg_messages_per_day_by_sender.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
+    plt.title('Average Messages per Day by Sender')
+    plt.xlabel('Sender')
+    plt.ylabel('Average Number of Messages per Day')
+    plt.xticks(rotation=45)
     plt.tight_layout()
 
     # Save the figure
@@ -153,8 +167,94 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.savefig(avg_messages_graph_image_path)
     plt.close()
     
+    # Sentiment counts
+    sentiment_counts = df['Sentiment_Label'].value_counts()
+    plt.figure(figsize=(10, 6))
+    sentiment_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
+    plt.title('Sentiment Counts')
+    plt.xlabel('Sentiment')
+    plt.ylabel('Number of Messages')
+    plt.tight_layout()
+    
+    # Save the figure
+    sentiment_counts_graph_image_path = 'static/visuals/sentiment_counts.png'
+    os.makedirs(os.path.dirname(sentiment_counts_graph_image_path), exist_ok=True)
+    plt.savefig(sentiment_counts_graph_image_path)
+    plt.close()
 
-    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path
+    # Calculate the number of links shared by each sender
+    links_shared = df[df['Message'].str.contains('http[s]?://')]['Sender'].value_counts()
+
+    # Create a pie chart for links shared
+    plt.figure(figsize=(8, 8))  # Adjust size for pie chart
+    plt.pie(links_shared, labels=links_shared.index, autopct='%1.1f%%', startangle=90)
+    plt.title('Links Shared by Each Sender')
+    plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    plt.tight_layout()
+
+    # Save the figure
+    links_pie_chart_path = 'static/visuals/links_shared_by_sender.png'
+    os.makedirs(os.path.dirname(links_pie_chart_path), exist_ok=True)
+    plt.savefig(links_pie_chart_path)
+    plt.close()
+
+    # Count occurrences of each emoji in the messages
+    emoji_counts = df['Message'].str.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F900-\U0001F9FF]').explode().value_counts()
+
+    # Get the top 10 emojis
+    top_10_emojis = emoji_counts.head(10)
+
+    # Create a bar chart for the top 10 emojis
+    plt.figure(figsize=(10, 6))
+    top_10_emojis.plot(kind='bar', color=['red', 'green', 'blue', 'yellow', 'purple', 'orange', 'pink', 'brown', 'grey', 'black'])
+    plt.title('Top 10 Emojis Used')
+    plt.xlabel('Emojis')
+    plt.ylabel('Count')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save the figure
+    top_emojis_graph_path = 'static/visuals/top_emojis.png'
+    os.makedirs(os.path.dirname(top_emojis_graph_path), exist_ok=True)
+    plt.savefig(top_emojis_graph_path)
+    plt.close()
+
+    # Count total messages
+    total_messages_count = len(df)
+
+    # Create a bar chart for total messages count
+    plt.figure(figsize=(8, 6))
+    plt.bar(['Total Messages'], [total_messages_count], color='lightblue')
+    plt.title('Total Messages Count')
+    plt.ylabel('Number of Messages')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save the figure
+    total_messages_graph_path = 'static/visuals/total_messages_count.png'
+    os.makedirs(os.path.dirname(total_messages_graph_path), exist_ok=True)
+    plt.savefig(total_messages_graph_path)
+    plt.close()
+
+    # Count the number of messages per sender
+    messages_count_per_sender = df['Sender'].value_counts()
+
+    # Create a bar chart for messages count per sender
+    plt.figure(figsize=(10, 6))
+    messages_count_per_sender.plot(kind='bar', color=['lightblue', 'yellow'])
+    plt.title('Total Messages Count per Sender')
+    plt.xlabel('Sender')
+    plt.ylabel('Number of Messages')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save the figure
+    messages_count_graph_path = 'static/visuals/messages_count_per_sender.png'
+    os.makedirs(os.path.dirname(messages_count_graph_path), exist_ok=True)
+    plt.savefig(messages_count_graph_path)
+    plt.close()
+
+    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path
 
 def analyze_chat_log(csv_file_path: str) -> dict:
     """Analyze chats into various statistics"""
@@ -163,7 +263,7 @@ def analyze_chat_log(csv_file_path: str) -> dict:
     
     participant1_message_count, participant2_message_count = analyze_participants(df)
     analysis_results = perform_analysis(df)
-    wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path = generate_visualizations(df)
+    wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path = generate_visualizations(df)
 
     results = {
         "total_messages": len(df),
@@ -174,7 +274,11 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         "wordcloud": wordcloud_image_path,
         "first_message_sender": bar_graph_image_path,
         "love_counts": love_graph_image_path,
-        "average_messages_per_day": avg_messages_graph_image_path
+        "average_messages_per_day": avg_messages_graph_image_path,
+        "sentiment_counts": sentiment_counts_graph_image_path,
+        "links_pie_chart": links_pie_chart_path,
+        "top_emojis": top_emojis_graph_path,
+        "messages_count_per_sender": messages_count_graph_path
     }
 
     return results
