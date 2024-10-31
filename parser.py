@@ -1,8 +1,8 @@
-import csv
 import re
 import pandas as pd
 
 def parse_chat_log(txt_file_path, csv_file_path):
+    """Parse the chat log and save it to a CSV file"""
     pattern = re.compile(r"\[(\d{1,2}/\d{1,2}/\d{4}), (\d{2}:\d{2}:\d{2})\] (.+?): (.+)")
     data = []
 
