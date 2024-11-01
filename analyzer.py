@@ -253,8 +253,61 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     os.makedirs(os.path.dirname(messages_count_graph_path), exist_ok=True)
     plt.savefig(messages_count_graph_path)
     plt.close()
+    
+    """Line Chart of Message Activity Over Time"""
+    df['DateTime'] = pd.to_datetime(df['Date'].astype(str) + ' ' + df['Time'].astype(str))
+    df['Date'] = df['DateTime'].dt.date
+    df['Time'] = df['DateTime'].dt.time
+    
+    # Group by date and count messages
+    message_activity = df.groupby('Date')['Message'].count()
+    
+    plt.figure(figsize=(10, 6))
+    message_activity.plot(kind='line', marker='o', color='skyblue')
+    plt.title('Message Activity Over Time')
+    plt.xlabel('Date')
+    plt.ylabel('Number of Messages')
+    plt.grid(True)
+    plt.tight_layout()
 
-    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path
+    # Save the figure
+    message_activity_graph_path = 'static/visuals/message_activity_over_time.png'
+    os.makedirs(os.path.dirname(message_activity_graph_path), exist_ok=True)
+    plt.savefig(message_activity_graph_path)
+    plt.close()
+    
+    """Heatmap to Display Message Activity by Hour and Day of the Week"""
+    
+    # Step 1: Combine Date and Time into a single datetime column
+    df['Date'] = df['Date'].astype(str)
+    df['Time'] = df['Time'].astype(str)
+    df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
+
+    # Step 2: Extract hour and day of the week
+    df['Hour'] = df['DateTime'].dt.hour
+    df['DayOfWeek'] = df['DateTime'].dt.day_name()
+
+    # Step 3: Create a pivot table
+    heatmap_data = df.pivot_table(index='DayOfWeek', columns='Hour', values='Message', aggfunc='count', fill_value=0)
+
+    # Reorder days of the week
+    ordered_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    heatmap_data = heatmap_data.reindex(ordered_days)
+
+    # Step 4: Plot the heatmap
+    plt.figure(figsize=(12, 6))
+    sns.heatmap(heatmap_data, cmap='YlGnBu', annot=True, fmt='d')
+    plt.title('Message Activity by Hour and Day of the Week')
+    plt.xlabel('Hour of the Day')
+    plt.ylabel('Day of the Week')
+
+    # Save the figure
+    message_activity_heatmap_path = 'static/visuals/message_activity_heatmap.png'
+    os.makedirs(os.path.dirname(message_activity_heatmap_path), exist_ok=True)
+    plt.savefig(message_activity_heatmap_path)
+    plt.close()
+
+    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path, message_activity_graph_path, message_activity_heatmap_path
 
 def analyze_chat_log(csv_file_path: str) -> dict:
     """Analyze chats into various statistics"""
@@ -263,7 +316,7 @@ def analyze_chat_log(csv_file_path: str) -> dict:
     
     participant1_message_count, participant2_message_count = analyze_participants(df)
     analysis_results = perform_analysis(df)
-    wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path = generate_visualizations(df)
+    wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path, message_activity_graph_path, message_activity_heatmap_path = generate_visualizations(df)
 
     results = {
         "total_messages": len(df),
@@ -278,7 +331,9 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         "sentiment_counts": sentiment_counts_graph_image_path,
         "links_pie_chart": links_pie_chart_path,
         "top_emojis": top_emojis_graph_path,
-        "messages_count_per_sender": messages_count_graph_path
+        "messages_count_per_sender": messages_count_graph_path,
+        "message_activity_over_time": message_activity_graph_path,
+        "message_activity_heatmap": message_activity_heatmap_path
     }
 
     return results
