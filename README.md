@@ -28,8 +28,8 @@ Sure! Here's a comprehensive documentation for the ChatInsight project that you 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/chatinsight.git
-cd chatinsight
+git clone git@github.com:xeroxzen/chat-insight.git
+cd chat-insight
 ```
 
 ### Install Dependencies
@@ -79,14 +79,18 @@ ChatInsight/
 
 ### Key Files and Directories
 
-- `app/main.py`: Entry point for the FastAPI application.
-- `app/routes.py`: Defines the routes for file upload and analysis results.
+- `app/__init__.py`: Initializes the FastAPI application.
+- `app/app.py`: Entry point for the FastAPI application.
 - `app/models.py`: Defines data models for the application.
+- `app/routes.py`: Defines the routes for file upload and analysis results.
 - `app/utils.py`: Contains utility functions for file handling and parsing.
 - `app/analysis.py`: Contains the analysis functions for processing chat data.
 - `app/templates/`: Contains Jinja2 templates for rendering HTML pages.
 - `app/static/`: Contains static files such as CSS and JavaScript.
-- `tests/`: Contains test cases for the application.
+- `tests/test_app.py`: Contains test cases for the application.
+- `tests/test_analysis.py`: Contains test cases for the analysis functions.
+- `requirements.txt`: Lists the dependencies required for the project.
+- `README.md`: Documentation for the project.
 
 ## Development
 
