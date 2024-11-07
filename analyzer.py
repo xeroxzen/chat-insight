@@ -115,7 +115,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     first_messages = df_filtered.groupby('Date').first()
     first_sender_counts = first_messages['Sender'].value_counts()
 
-    # Create a bar graph
+    # Bar chart
     plt.figure(figsize=(10, 6))
     first_sender_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
     plt.title('First Message of the Day by Sender (After 6 AM)')
@@ -125,7 +125,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.grid(axis='y')
     plt.tight_layout()
 
-    # Save the figure
+    # Saved figure
     bar_graph_image_path = 'static/visuals/first_message_sender.png'
     os.makedirs(os.path.dirname(bar_graph_image_path), exist_ok=True)
     plt.savefig(bar_graph_image_path)
