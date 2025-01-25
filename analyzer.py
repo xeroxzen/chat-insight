@@ -8,32 +8,122 @@ from nltk.corpus import stopwords
 import re
 import os
 from textblob import TextBlob
+import logging
+from pathlib import Path
+from typing import Dict, Tuple, List, Any
+from dataclasses import dataclass, field
+import numpy as np
 
 nltk.download('stopwords')
 
+# Add configuration
+@dataclass
+class VisualizationConfig:
+    """Configuration for visualization settings"""
+    figure_sizes: Dict[str, Tuple[int, int]] = field(default_factory=lambda: {
+        'default': (10, 6),
+        'pie': (8, 8),
+        'heatmap': (12, 6)
+    })
+    colors: List[str] = field(default_factory=lambda: [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD'
+    ])
+    output_dir: Path = Path('static/visuals')
+    dpi: int = 300
+
+# Add constants
+EMOJI_PATTERN = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F900-\U0001F9FF]'
+URL_PATTERN = r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
+DAY_START_HOUR = 6
+EXCLUDED_MESSAGES = [
+    'joined', 'left', 'removed', 'changed', 'image omitted', 
+    'video omitted', 'video call', 'voice call', 'audio omitted',
+    'missed voice', 'missed video', 'google jr'
+]
+
+# Add logger configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def setup_output_directory(config: VisualizationConfig) -> None:
+    """Create output directory for visualizations if it doesn't exist."""
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+
 def read_chat_log(csv_file_path: str) -> pd.DataFrame:
-    """Read the chat log from a CSV file."""
-    try:
-        df = pd.read_csv(csv_file_path)
-    except FileNotFoundError:
-        raise ValueError(f"File not found: {csv_file_path}")
-    except pd.errors.EmptyDataError:
-        raise ValueError("No data found in the file.")
+    """
+    Read and validate the chat log from a CSV file.
     
-    # Strip any leading/trailing spaces from the column headers
-    df.columns = df.columns.str.strip()
-    df['Date'] = df['Date'].str.strip()
-    return df
+    Args:
+        csv_file_path: Path to the CSV file containing chat data
+        
+    Returns:
+        DataFrame containing the chat data
+        
+    Raises:
+        ValueError: If file is not found or contains no data
+    """
+    try:
+        file_path = Path(csv_file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {csv_file_path}")
+            
+        df = pd.read_csv(file_path)
+        if df.empty:
+            raise ValueError("No data found in the file.")
+        
+        # Strip any leading/trailing spaces from the column headers and date
+        df.columns = df.columns.str.strip()
+        if 'Date' in df.columns:
+            df['Date'] = df['Date'].str.strip()
+        
+        required_columns = {'Date', 'Time', 'Sender', 'Message'}
+        missing_columns = required_columns - set(df.columns)
+        if missing_columns:
+            raise ValueError(f"Missing required columns: {missing_columns}")
+            
+        return df
+        
+    except Exception as e:
+        logger.error(f"Error reading chat log: {str(e)}")
+        raise
 
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Preprocess the chat log data."""
-    df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
-    df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S', errors='coerce').dt.time
-    df = df[~df['Message'].astype(str).str.contains('joined|left|removed|changed|image omitted|video omitted|video call|voice call|audio omitted|missed voice|missed video|google jr', case=False)]
-    df = df.dropna(subset=['Date', 'Time'])
-    df.loc[:, 'Message'] = df['Message'].astype(str)
-    df = df.dropna(subset=['Message'])
-    return df
+    """
+    Preprocess the chat log data with improved handling of date/time.
+    
+    Args:
+        df: Raw DataFrame containing chat data
+        
+    Returns:
+        Preprocessed DataFrame
+    """
+    try:
+        # Convert Date and Time to datetime
+        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
+        df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S', errors='coerce').dt.time
+        
+        # Filter out system messages and media
+        pattern = '|'.join(EXCLUDED_MESSAGES)
+        df = df[~df['Message'].astype(str).str.contains(pattern, case=False)]
+        
+        # Clean up missing values
+        df = df.dropna(subset=['Date', 'Time', 'Message'])
+        df.loc[:, 'Message'] = df['Message'].astype(str)
+        
+        # Add DateTime column for easier analysis
+        df['DateTime'] = pd.to_datetime(
+            df['Date'].dt.strftime('%Y-%m-%d') + ' ' + 
+            df['Time'].astype(str)
+        )
+        
+        return df
+        
+    except Exception as e:
+        logger.error(f"Error preprocessing data: {str(e)}")
+        raise
 
 def analyze_participants(df: pd.DataFrame) -> tuple:
     """Analyze participants and their message counts."""
@@ -95,14 +185,19 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         "sentiment_counts": sentiment_counts,
     }
 
-def generate_visualizations(df: pd.DataFrame) -> str:
+def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Tuple[Path, ...]:
     """Generate visualizations from the chat log."""
-    wordcloud = WordCloud(width=800, height=400, background_color='white', stopwords=STOPWORDS, max_words=200).generate(' '.join(df['Message']))
+    # Create wordcloud
+    wordcloud = WordCloud(
+        width=800, 
+        height=400, 
+        background_color='white', 
+        stopwords=STOPWORDS, 
+        max_words=200
+    ).generate(' '.join(df['Message']))
     
-    if not os.path.exists('visuals'):
-        os.makedirs('visuals')
-    wordcloud_image_path = 'static/visuals/wordcloud.png'
-    wordcloud.to_file(wordcloud_image_path)
+    wordcloud_path = config.output_dir / 'wordcloud.png'
+    wordcloud.to_file(str(wordcloud_path))  # Convert Path to string
     
     """
     Who sends the first message of the day more often.
@@ -126,7 +221,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Saved figure
-    bar_graph_image_path = 'static/visuals/first_message_sender.png'
+    bar_graph_image_path = config.output_dir / 'first_message_sender.png'
     os.makedirs(os.path.dirname(bar_graph_image_path), exist_ok=True)
     plt.savefig(bar_graph_image_path)
     plt.close()
@@ -145,7 +240,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
     
     # Save the figure
-    love_graph_image_path = 'static/visuals/love_counts.png'
+    love_graph_image_path = config.output_dir / 'love_counts.png'
     os.makedirs(os.path.dirname(love_graph_image_path), exist_ok=True)
     plt.savefig(love_graph_image_path)
     plt.close()
@@ -162,7 +257,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Save the figure
-    avg_messages_graph_image_path = 'static/visuals/average_messages_per_day.png'
+    avg_messages_graph_image_path = config.output_dir / 'average_messages_per_day.png'
     os.makedirs(os.path.dirname(avg_messages_graph_image_path), exist_ok=True)
     plt.savefig(avg_messages_graph_image_path)
     plt.close()
@@ -177,9 +272,9 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
     
     # Save the figure
-    sentiment_counts_graph_image_path = 'static/visuals/sentiment_counts.png'
-    os.makedirs(os.path.dirname(sentiment_counts_graph_image_path), exist_ok=True)
-    plt.savefig(sentiment_counts_graph_image_path)
+    sentiment_counts_graph_path = config.output_dir / 'sentiment_counts.png'
+    os.makedirs(os.path.dirname(sentiment_counts_graph_path), exist_ok=True)
+    plt.savefig(sentiment_counts_graph_path)
     plt.close()
 
     # Calculate the number of links shared by each sender
@@ -193,7 +288,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Save the figure
-    links_pie_chart_path = 'static/visuals/links_shared_by_sender.png'
+    links_pie_chart_path = config.output_dir / 'links_shared_by_sender.png'
     os.makedirs(os.path.dirname(links_pie_chart_path), exist_ok=True)
     plt.savefig(links_pie_chart_path)
     plt.close()
@@ -214,7 +309,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Save the figure
-    top_emojis_graph_path = 'static/visuals/top_emojis.png'
+    top_emojis_graph_path = config.output_dir / 'top_emojis.png'
     os.makedirs(os.path.dirname(top_emojis_graph_path), exist_ok=True)
     plt.savefig(top_emojis_graph_path)
     plt.close()
@@ -231,7 +326,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Save the figure
-    total_messages_graph_path = 'static/visuals/total_messages_count.png'
+    total_messages_graph_path = config.output_dir / 'total_messages_count.png'
     os.makedirs(os.path.dirname(total_messages_graph_path), exist_ok=True)
     plt.savefig(total_messages_graph_path)
     plt.close()
@@ -249,7 +344,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Save the figure
-    messages_count_graph_path = 'static/visuals/messages_count_per_sender.png'
+    messages_count_graph_path = config.output_dir / 'messages_count_per_sender.png'
     os.makedirs(os.path.dirname(messages_count_graph_path), exist_ok=True)
     plt.savefig(messages_count_graph_path)
     plt.close()
@@ -271,7 +366,7 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.tight_layout()
 
     # Save the figure
-    message_activity_graph_path = 'static/visuals/message_activity_over_time.png'
+    message_activity_graph_path = config.output_dir / 'message_activity_over_time.png'
     os.makedirs(os.path.dirname(message_activity_graph_path), exist_ok=True)
     plt.savefig(message_activity_graph_path)
     plt.close()
@@ -302,38 +397,101 @@ def generate_visualizations(df: pd.DataFrame) -> str:
     plt.ylabel('Day of the Week')
 
     # Save the figure
-    message_activity_heatmap_path = 'static/visuals/message_activity_heatmap.png'
+    message_activity_heatmap_path = config.output_dir / 'message_activity_heatmap.png'
     os.makedirs(os.path.dirname(message_activity_heatmap_path), exist_ok=True)
     plt.savefig(message_activity_heatmap_path)
     plt.close()
 
-    return wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path, message_activity_graph_path, message_activity_heatmap_path
+    return (
+        wordcloud_path,
+        bar_graph_image_path,
+        love_graph_image_path,
+        avg_messages_graph_image_path,
+        sentiment_counts_graph_path,
+        links_pie_chart_path,
+        top_emojis_graph_path,
+        messages_count_graph_path,
+        message_activity_graph_path,
+        message_activity_heatmap_path
+    )
 
 def analyze_chat_log(csv_file_path: str) -> dict:
     """Analyze chats into various statistics"""
+    # Create a config instance and set up directories
+    config = VisualizationConfig()
+    setup_output_directory(config)
+    
     df = read_chat_log(csv_file_path)
     df = preprocess_data(df)
     
     participant1_message_count, participant2_message_count = analyze_participants(df)
     analysis_results = perform_analysis(df)
-    wordcloud_image_path, bar_graph_image_path, love_graph_image_path, avg_messages_graph_image_path, sentiment_counts_graph_image_path, links_pie_chart_path, top_emojis_graph_path, messages_count_graph_path, message_activity_graph_path, message_activity_heatmap_path = generate_visualizations(df)
-
+    
+    # Pass config to generate_visualizations
+    visualization_paths = generate_visualizations(df, config)
+    
     results = {
         "total_messages": len(df),
         "unique_senders": df['Sender'].nunique(),
         "participant1_message_count": participant1_message_count,
         "participant2_message_count": participant2_message_count,
         **analysis_results,
-        "wordcloud": wordcloud_image_path,
-        "first_message_sender": bar_graph_image_path,
-        "love_counts": love_graph_image_path,
-        "average_messages_per_day": avg_messages_graph_image_path,
-        "sentiment_counts": sentiment_counts_graph_image_path,
-        "links_pie_chart": links_pie_chart_path,
-        "top_emojis": top_emojis_graph_path,
-        "messages_count_per_sender": messages_count_graph_path,
-        "message_activity_over_time": message_activity_graph_path,
-        "message_activity_heatmap": message_activity_heatmap_path
+        "wordcloud": visualization_paths[0],
+        "first_message_sender": visualization_paths[1],
+        "love_counts": visualization_paths[2],
+        "average_messages_per_day": visualization_paths[3],
+        "sentiment_counts": visualization_paths[4],
+        "links_pie_chart": visualization_paths[5],
+        "top_emojis": visualization_paths[6],
+        "messages_count_per_sender": visualization_paths[7],
+        "message_activity_over_time": visualization_paths[8],
+        "message_activity_heatmap": visualization_paths[9]
     }
 
     return results
+
+def save_visualization(fig: plt.Figure, filename: str, config: VisualizationConfig) -> Path:
+    """Save visualization to file and return the path."""
+    output_path = config.output_dir / filename
+    fig.savefig(output_path, dpi=config.dpi, bbox_inches='tight')
+    plt.close(fig)
+    return output_path
+
+def create_message_activity_heatmap(df: pd.DataFrame, config: VisualizationConfig) -> Path:
+    """Create heatmap of message activity by hour and day of week."""
+    try:
+        df['Hour'] = df['DateTime'].dt.hour
+        df['DayOfWeek'] = df['DateTime'].dt.day_name()
+        
+        heatmap_data = df.pivot_table(
+            index='DayOfWeek', 
+            columns='Hour',
+            values='Message',
+            aggfunc='count',
+            fill_value=0
+        )
+        
+        ordered_days = [
+            'Monday', 'Tuesday', 'Wednesday', 
+            'Thursday', 'Friday', 'Saturday', 'Sunday'
+        ]
+        heatmap_data = heatmap_data.reindex(ordered_days)
+        
+        fig, ax = plt.subplots(figsize=config.figure_sizes['heatmap'])
+        sns.heatmap(
+            heatmap_data,
+            cmap='YlGnBu',
+            annot=True,
+            fmt='d',
+            ax=ax
+        )
+        
+        plt.title('Message Activity by Hour and Day of the Week')
+        plt.xlabel('Hour of the Day')
+        plt.ylabel('Day of the Week')
+        
+        return save_visualization(fig, 'message_activity_heatmap.png', config)
+        
+    except Exception as e:
+        logger.error(f"Error creating heatmap: {str(e)}")
+        raise
