@@ -10,48 +10,151 @@
     />
     <style>
       body {
-        background-color: #f0f8ff; /* Light background for contrast */
-        color: #333; /* Dark text for readability */
-        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+        color: #fff;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        min-height: 100vh;
+        padding: 2rem;
       }
+
       h1 {
-        color: #069494; /* Teal color for the main heading */
+        font-size: 3.5rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #fff;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
       }
+
+      .description {
+        text-align: center;
+        font-size: 1.2rem;
+        max-width: 800px;
+        margin: 0 auto 3rem;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
       .container {
         display: flex;
-        justify-content: space-between;
         flex-wrap: wrap;
+        gap: 1.5rem;
+        justify-content: center;
+        max-width: 1400px;
+        margin: 0 auto;
       }
-      .child {
-        flex: 1;
-        margin: 10px;
-        min-width: 200px;
-        box-sizing: border-box;
-      }
+
       .card {
-        background-color: rgb(119, 201, 191);
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        margin: 10px;
-        padding: 15px;
-        flex: 1 1 calc(30% - 20px); /* Responsive card width */
-        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+        flex: 1 1 300px;
+        max-width: 400px;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .card h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #fff;
+        font-weight: 600;
+      }
+
+      .card p, .card li {
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+      }
+
+      .card ul, .card ol {
+        padding-left: 1.2rem;
+      }
+
       .visualization {
-        background-color: white;
-        width: 45%;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: left;
-        padding: 20px;
-        margin: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+        flex: 1 1 45%;
+        max-width: 600px;
+        transition: all 0.3s ease;
+        cursor: pointer;
       }
-      .description {
-        margin: 20px 0;
-        font-size: 1.1em;
-        color: #555; /* Slightly lighter text for description */
+
+      .visualization:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .visualization h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #fff;
+      }
+
+      .visualization img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .visualization:hover img {
+        transform: scale(1.02);
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 5px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      /* Links styling */
+      a {
+        color: #26d0ce;
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+
+      a:hover {
+        color: #fff;
+        text-decoration: underline;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        body {
+          padding: 1rem;
+        }
+
+        h1 {
+          font-size: 2.5rem;
+        }
+
+        .card, .visualization {
+          flex: 1 1 100%;
+        }
       }
     </style>
   </head>
