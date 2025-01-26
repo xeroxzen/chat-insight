@@ -202,15 +202,11 @@
     <div class="container">
       <div class="card">
         <h2>Message Counts</h2>
-        {% if results and results.message_counts %}
-            <ol>
-            {% for participant, count in results.message_counts.items() %}
-                <li>{{ participant }}: {{ count }} messages</li>
-            {% endfor %}
-            </ol>
-        {% else %}
-            <p>No message count data available</p>
-        {% endif %}
+        <ol>
+          {% for participant, count in results.top_participants.items() %}
+          <li>{{ participant }}: {{ count }}</li>
+          {% endfor %}
+        </ol>
       </div>
       <div class="card">
         <h2>Most Active Day</h2>
@@ -227,15 +223,6 @@
           <li>{{ word }}: {{ freq }}</li>
           {% endfor %}
         </ul>
-      </div>
-
-      <div class="card">
-        <h2>Top Participants</h2>
-        <ol>
-          {% for participant, count in results.top_participants.items() %}
-          <li>{{ participant }}: {{ count }}</li>
-          {% endfor %}
-        </ol>
       </div>
       <div class="card">
         <h2>Top Emojis</h2>
