@@ -172,7 +172,35 @@ def perform_analysis(df: pd.DataFrame) -> dict:
     df = analyze_sentiment(df)
     sentiment_counts = df['Sentiment_Label'].value_counts().to_dict()
     
-    return {
+    # Add new analyses
+    # 1. Response time analysis
+    df_sorted = df.sort_values('DateTime')
+    df_sorted['TimeDiff'] = df_sorted['DateTime'].diff()
+    avg_response_time = df_sorted.groupby('Sender')['TimeDiff'].mean()
+    
+    # 2. Most active hours for each person
+    active_hours_by_sender = df.groupby(['Sender', df['DateTime'].dt.hour])['Message'].count().unstack()
+    peak_hours = {sender: active_hours_by_sender.loc[sender].idxmax() for sender in active_hours_by_sender.index}
+    
+    # 3. Longest message streak analysis
+    df_sorted['TimeDiff'] = df_sorted['DateTime'].diff().dt.total_seconds()
+    streak_threshold = 300  # 5 minutes
+    df_sorted['NewStreak'] = df_sorted['TimeDiff'] > streak_threshold
+    df_sorted['StreakId'] = df_sorted['NewStreak'].cumsum()
+    streak_counts = df_sorted.groupby('StreakId').size()
+    longest_streak = streak_counts.max()
+    
+    # 4. Question analysis
+    question_patterns = r'\b(who|what|when|where|why|how)\b|\?'
+    df['IsQuestion'] = df['Message'].str.contains(question_patterns, case=False)
+    questions_by_sender = df[df['IsQuestion']]['Sender'].value_counts()
+    
+    # 5. Message length analysis
+    df['MessageLength'] = df['Message'].str.len()
+    avg_message_length = df.groupby('Sender')['MessageLength'].mean()
+    
+    # Update return dictionary
+    analysis_results = {
         "most_active_day": most_active_day.date(),
         "most_active_time": f"{most_active_time}:00",
         "most_common_words": most_common_words,
@@ -183,9 +211,16 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         "emojis": emojis.to_dict(),
         "links": links.to_dict(),
         "sentiment_counts": sentiment_counts,
+        "average_response_times": avg_response_time.to_dict(),
+        "peak_activity_hours": peak_hours,
+        "longest_message_streak": longest_streak,
+        "questions_asked": questions_by_sender.to_dict(),
+        "average_message_length": avg_message_length.to_dict()
     }
+    
+    return analysis_results
 
-def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Tuple[Path, ...]:
+def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_type='friends') -> Tuple[Path, ...]:
     """Generate visualizations from the chat log."""
     # Create wordcloud
     wordcloud = WordCloud(
@@ -226,25 +261,84 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Tu
     plt.savefig(bar_graph_image_path)
     plt.close()
     
-    # Who says I love you more
-    love_counts = df[df['Message'].str.contains('i love you', case=False)]['Sender'].value_counts()
-    
-    # Create a bar graph
-    plt.figure(figsize=(10, 6))
-    love_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
-    plt.title('Number of Times "I Love You" Sent by Sender')
-    plt.xlabel('Sender')
-    plt.ylabel('Number of Times "I Love You" Sent')
-    plt.xticks(rotation=45)
-    plt.grid(axis='y')
-    plt.tight_layout()
-    
-    # Save the figure
-    love_graph_image_path = config.output_dir / 'love_counts.png'
-    os.makedirs(os.path.dirname(love_graph_image_path), exist_ok=True)
-    plt.savefig(love_graph_image_path)
-    plt.close()
-    
+    # Love counts visualization with chat type handling
+    if chat_type.lower() == 'romantic':
+        try:
+            love_patterns = ['❤️', '💕', '💗', '💓', '💖']
+            love_counts = pd.Series({
+                pattern: df['Message'].str.count(pattern).sum() 
+                for pattern in love_patterns
+            })
+            
+            if not love_counts.empty and love_counts.sum() > 0:
+                plt.figure(figsize=config.figure_sizes['default'])
+                love_counts.plot(kind='bar', color=['red', 'pink', 'magenta', 'crimson', 'deeppink'])
+                plt.title('Love Emoji Usage')
+                plt.xlabel('Emoji Type')
+                plt.ylabel('Count')
+                plt.xticks(rotation=45)
+                love_counts_path = config.output_dir / 'love_counts.png'
+                plt.savefig(love_counts_path, bbox_inches='tight')
+                plt.close()
+            else:
+                plt.figure(figsize=config.figure_sizes['default'])
+                plt.text(0.5, 0.5, 'No love emojis found in the chat', 
+                        horizontalalignment='center',
+                        verticalalignment='center')
+                plt.axis('off')
+                love_counts_path = config.output_dir / 'love_counts.png'
+                plt.savefig(love_counts_path, bbox_inches='tight')
+                plt.close()
+        except Exception as e:
+            print(f"Error generating love counts visualization: {e}")
+            plt.figure(figsize=config.figure_sizes['default'])
+            plt.text(0.5, 0.5, 'Unable to generate love emoji visualization', 
+                    horizontalalignment='center',
+                    verticalalignment='center')
+            plt.axis('off')
+            love_counts_path = config.output_dir / 'love_counts.png'
+            plt.savefig(love_counts_path, bbox_inches='tight')
+            plt.close()
+    else:
+        # For non-romantic chats, generate a friendship emoji analysis instead
+        try:
+            friendship_patterns = ['😊', '😄', '👍', '🤝', '🙌', '✌️', '🎉', '🤗']
+            friendship_counts = pd.Series({
+                pattern: df['Message'].str.count(pattern).sum() 
+                for pattern in friendship_patterns
+            })
+            
+            if not friendship_counts.empty and friendship_counts.sum() > 0:
+                plt.figure(figsize=config.figure_sizes['default'])
+                friendship_counts.plot(kind='bar', color=['gold', 'orange', 'dodgerblue', 'mediumseagreen', 
+                                                        'cornflowerblue', 'mediumpurple', 'coral', 'lightseagreen'])
+                plt.title('Friendly Emoji Usage')
+                plt.xlabel('Emoji Type')
+                plt.ylabel('Count')
+                plt.xticks(rotation=45)
+                love_counts_path = config.output_dir / 'friendship_emoji_counts.png'
+                plt.savefig(love_counts_path, bbox_inches='tight')
+                plt.close()
+            else:
+                plt.figure(figsize=config.figure_sizes['default'])
+                plt.text(0.5, 0.5, 'No friendly emojis found in the chat', 
+                        horizontalalignment='center',
+                        verticalalignment='center')
+                plt.axis('off')
+                love_counts_path = config.output_dir / 'friendship_emoji_counts.png'
+                plt.savefig(love_counts_path, bbox_inches='tight')
+                plt.close()
+        except Exception as e:
+            print(f"Error generating friendship emoji visualization: {e}")
+            plt.figure(figsize=config.figure_sizes['default'])
+            plt.text(0.5, 0.5, 'Unable to generate friendship emoji visualization', 
+                    horizontalalignment='center',
+                    verticalalignment='center')
+            plt.axis('off')
+            love_counts_path = config.output_dir / 'friendship_emoji_counts.png'
+            plt.savefig(love_counts_path, bbox_inches='tight')
+            plt.close()
+
     # Average messages per day by sender
     avg_messages_per_day_by_sender = df.groupby('Sender')['Date'].value_counts().groupby('Sender').mean()
     
@@ -402,17 +496,54 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Tu
     plt.savefig(message_activity_heatmap_path)
     plt.close()
 
+    # New visualizations
+    
+    # 1. Message Length Distribution
+    plt.figure(figsize=config.figure_sizes['default'])
+    sns.boxplot(x='Sender', y='MessageLength', data=df)
+    plt.title('Message Length Distribution by Sender')
+    plt.ylabel('Message Length (characters)')
+    message_length_path = config.output_dir / 'message_length_distribution.png'
+    plt.savefig(message_length_path)
+    plt.close()
+    
+    # 2. Daily Conversation Pattern
+    daily_pattern = df.groupby([df['DateTime'].dt.hour, 'Sender'])['Message'].count().unstack()
+    plt.figure(figsize=config.figure_sizes['default'])
+    daily_pattern.plot(kind='line', marker='o')
+    plt.title('Daily Conversation Pattern')
+    plt.xlabel('Hour of Day')
+    plt.ylabel('Number of Messages')
+    plt.legend(title='Sender')
+    daily_pattern_path = config.output_dir / 'daily_pattern.png'
+    plt.savefig(daily_pattern_path)
+    plt.close()
+    
+    # 3. Response Time Distribution
+    plt.figure(figsize=config.figure_sizes['default'])
+    df_sorted = df.sort_values('DateTime')
+    response_times = df_sorted['DateTime'].diff().dt.total_seconds() / 60  # Convert to minutes
+    sns.histplot(data=response_times[response_times < 60], bins=30)  # Show responses within 1 hour
+    plt.title('Response Time Distribution (within 1 hour)')
+    plt.xlabel('Response Time (minutes)')
+    response_time_path = config.output_dir / 'response_time_distribution.png'
+    plt.savefig(response_time_path)
+    plt.close()
+
     return (
         wordcloud_path,
         bar_graph_image_path,
-        love_graph_image_path,
+        love_counts_path,
         avg_messages_graph_image_path,
         sentiment_counts_graph_path,
         links_pie_chart_path,
         top_emojis_graph_path,
         messages_count_graph_path,
         message_activity_graph_path,
-        message_activity_heatmap_path
+        message_activity_heatmap_path,
+        message_length_path,
+        daily_pattern_path,
+        response_time_path
     )
 
 def analyze_chat_log(csv_file_path: str) -> dict:
@@ -445,7 +576,10 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         "top_emojis": visualization_paths[6],
         "messages_count_per_sender": visualization_paths[7],
         "message_activity_over_time": visualization_paths[8],
-        "message_activity_heatmap": visualization_paths[9]
+        "message_activity_heatmap": visualization_paths[9],
+        "message_length_distribution": visualization_paths[10],
+        "daily_conversation_pattern": visualization_paths[11],
+        "response_time_distribution": visualization_paths[12]
     }
 
     return results
