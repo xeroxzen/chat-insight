@@ -10,9 +10,11 @@ import os
 from textblob import TextBlob
 import logging
 from pathlib import Path
-from typing import Dict, Tuple, List, Any
+from typing import Dict, Tuple, List, Any, Optional
 from dataclasses import dataclass, field
 import numpy as np
+import networkx as nx
+from datetime import datetime
 
 nltk.download('stopwords')
 
@@ -102,8 +104,8 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     try:
         # Convert Date and Time to datetime
-        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
-        df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S', errors='coerce').dt.time
+        df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
+        df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S').dt.time
         
         # Filter out system messages and media
         pattern = '|'.join(EXCLUDED_MESSAGES)
@@ -220,9 +222,11 @@ def perform_analysis(df: pd.DataFrame) -> dict:
     
     return analysis_results
 
-def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_type='friends') -> Tuple[Path, ...]:
+def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_type='friends') -> Dict[str, Path]:
     """Generate visualizations from the chat log."""
-    # Create wordcloud
+    visualizations = {}
+    
+    # Create and save wordcloud
     wordcloud = WordCloud(
         width=800, 
         height=400, 
@@ -231,21 +235,13 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         max_words=200
     ).generate(' '.join(df['Message']))
     
-    wordcloud_path = config.output_dir / 'wordcloud.png'
-    wordcloud.to_file(str(wordcloud_path))  # Convert Path to string
+    visualizations['wordcloud'] = save_visualization(wordcloud, 'wordcloud.png', config)
     
-    """
-    Who sends the first message of the day more often.
-    
-    A new day starts at 6am. So first step is to combine Date and Time into a single datetime column, then filter the date part for grouping, and proceed to find the first message
-    """
-    # Filter messages starting from 6 AM and find the first message of each day
-    df['Time'] = pd.to_datetime(df['Time'], format='%H:%M:%S').dt.time
+    # First message sender analysis
     df_filtered = df[df['Time'] >= pd.to_datetime('06:00:00').time()]
     first_messages = df_filtered.groupby('Date').first()
     first_sender_counts = first_messages['Sender'].value_counts()
-
-    # Bar chart
+    
     plt.figure(figsize=(10, 6))
     first_sender_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
     plt.title('First Message of the Day by Sender (After 6 AM)')
@@ -254,11 +250,8 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
     plt.xticks(rotation=45)
     plt.grid(axis='y')
     plt.tight_layout()
-
-    # Saved figure
-    bar_graph_image_path = config.output_dir / 'first_message_sender.png'
-    os.makedirs(os.path.dirname(bar_graph_image_path), exist_ok=True)
-    plt.savefig(bar_graph_image_path)
+    
+    visualizations['first_message_sender'] = save_visualization(plt.gcf(), 'first_message_sender.png', config)
     plt.close()
     
     # Love counts visualization with chat type handling
@@ -530,65 +523,230 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
     plt.savefig(response_time_path)
     plt.close()
 
-    return (
-        wordcloud_path,
-        bar_graph_image_path,
-        love_counts_path,
-        avg_messages_graph_image_path,
-        sentiment_counts_graph_path,
-        links_pie_chart_path,
-        top_emojis_graph_path,
-        messages_count_graph_path,
-        message_activity_graph_path,
-        message_activity_heatmap_path,
-        message_length_path,
-        daily_pattern_path,
-        response_time_path
-    )
+    return visualizations
 
-def analyze_chat_log(csv_file_path: str) -> dict:
-    """Analyze chats into various statistics"""
-    # Create a config instance and set up directories
+@dataclass
+class ChatAnalysis:
+    """Container for chat analysis results"""
+    is_group: bool
+    participant_count: int
+    total_messages: int
+    analysis_period: Tuple[str, str]  # (start_date, end_date)
+    participant_stats: Dict[str, Dict[str, Any]]
+    message_patterns: Dict[str, Any]
+    sentiment_analysis: Dict[str, Any]
+    visualization_paths: Dict[str, Path]
+    top_participants: Dict[str, int]
+    most_active_day: datetime
+    emojis: Dict[str, int]
+    links: Dict[str, int]
+    first_message_date: datetime
+    last_message_date: datetime
+    avg_messages_per_day: float
+    
+    # Group-specific metrics
+    group_dynamics: Optional[Dict[str, Any]] = None
+    interaction_network: Optional[Dict[str, Any]] = None
+    
+    # Individual-specific metrics
+    conversation_balance: Optional[Dict[str, Any]] = None
+    response_patterns: Optional[Dict[str, Any]] = None
+
+def determine_chat_type(df: pd.DataFrame) -> bool:
+    """
+    Determine if the chat is a group chat or individual chat.
+    
+    Returns:
+        bool: True if group chat, False if individual chat
+    """
+    unique_senders = df['Sender'].nunique()
+    return unique_senders > 2
+
+def analyze_group_dynamics(df: pd.DataFrame) -> Dict[str, Any]:
+    """Analyze group-specific metrics."""
+    # Get top 15 participants by message count
+    message_counts = df['Sender'].value_counts()
+    top_15_participants = message_counts.head(15)
+    
+    # Message distribution for top 15
+    most_active_member = top_15_participants.index[0]
+    least_active_member = top_15_participants.index[-1]
+    
+    # Interaction patterns for top 15
+    df_filtered = df[df['Sender'].isin(top_15_participants.index)]
+    df_filtered['Hour'] = df_filtered['DateTime'].dt.hour
+    peak_hours = df_filtered.groupby(['Sender', 'Hour'])['Message'].count().groupby('Sender').idxmax()
+    
+    # Create interaction network data for top 15
+    df_sorted = df_filtered.sort_values('DateTime')
+    df_sorted['Next_Sender'] = df_sorted['Sender'].shift(-1)
+    interactions = df_sorted.groupby(['Sender', 'Next_Sender']).size().reset_index(name='weight')
+    
+    return {
+        "participant_count": len(message_counts),  # Keep total count
+        "top_15_count": len(top_15_participants),
+        "most_active_member": most_active_member,
+        "least_active_member": least_active_member,
+        "peak_hours": peak_hours.to_dict(),
+        "interaction_data": interactions.to_dict('records')
+    }
+
+def analyze_individual_chat(df: pd.DataFrame) -> Dict[str, Any]:
+    """Analyze metrics specific to individual chats."""
+    participants = df['Sender'].unique()
+    if len(participants) != 2:
+        raise ValueError("Individual chat analysis requires exactly 2 participants")
+    
+    # Message balance
+    message_counts = df['Sender'].value_counts()
+    total_messages = len(df)
+    message_ratio = f"{message_counts[0]}/{message_counts[1]}"
+    
+    # Response patterns
+    df_sorted = df.sort_values('DateTime')
+    df_sorted['TimeDiff'] = df_sorted['DateTime'].diff()
+    avg_response_times = df_sorted.groupby('Sender')['TimeDiff'].mean()
+    
+    return {
+        "participants": participants.tolist(),
+        "message_ratio": message_ratio,
+        "message_balance_percentage": (message_counts[0] / total_messages) * 100,
+        "avg_response_times": avg_response_times.to_dict()
+    }
+
+def generate_group_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Dict[str, Path]:
+    """Generate visualizations specific to group chats."""
+    # Get top 15 participants
+    top_15_senders = df['Sender'].value_counts().head(15)
+    
+    # Participation distribution for top 15
+    plt.figure(figsize=config.figure_sizes['default'])
+    sns.barplot(x=top_15_senders.index, y=top_15_senders.values)
+    plt.title('Top 15 Group Participation Distribution')
+    plt.xticks(rotation=45, ha='right')
+    participation_path = save_visualization(plt.gcf(), 'group_participation.png', config)
+    
+    # Interaction network for top 15
+    plt.figure(figsize=config.figure_sizes['default'])
+    df_filtered = df[df['Sender'].isin(top_15_senders.index)]
+    G = nx.from_pandas_edgelist(
+        df_filtered.sort_values('DateTime').assign(Next_Sender=lambda x: x['Sender'].shift(-1))
+        .groupby(['Sender', 'Next_Sender']).size().reset_index(name='weight'),
+        'Sender', 'Next_Sender', 'weight'
+    )
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', 
+            node_size=1000, font_size=8)
+    network_path = save_visualization(plt.gcf(), 'group_interaction_network.png', config)
+    
+    return {
+        "participation_distribution": participation_path,
+        "interaction_network": network_path
+    }
+
+def generate_individual_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Dict[str, Path]:
+    """Generate visualizations specific to individual chats."""
+    # Conversation flow
+    plt.figure(figsize=config.figure_sizes['default'])
+    timeline = df.set_index('DateTime')['Sender'].astype('category').cat.codes
+    plt.plot(timeline.index, timeline.values, 'o-')
+    plt.title('Conversation Flow')
+    plt.ylabel('Participant')
+    plt.yticks([0, 1], df['Sender'].unique())
+    flow_path = save_visualization(plt.gcf(), 'conversation_flow.png', config)
+    
+    return {
+        "conversation_flow": flow_path
+    }
+
+def analyze_chat_log(csv_file_path: str) -> ChatAnalysis:
+    """Main function to analyze chat logs."""
     config = VisualizationConfig()
     setup_output_directory(config)
     
+    # Read and preprocess data
     df = read_chat_log(csv_file_path)
     df = preprocess_data(df)
     
-    participant1_message_count, participant2_message_count = analyze_participants(df)
-    analysis_results = perform_analysis(df)
+    # Determine chat type
+    is_group = determine_chat_type(df)
     
-    # Pass config to generate_visualizations
-    visualization_paths = generate_visualizations(df, config)
+    # Calculate most active day
+    messages_per_day = df.groupby('Date').size()
+    most_active_day = messages_per_day.idxmax()
     
-    results = {
-        "total_messages": len(df),
-        "unique_senders": df['Sender'].nunique(),
-        "participant1_message_count": participant1_message_count,
-        "participant2_message_count": participant2_message_count,
-        **analysis_results,
-        "wordcloud": visualization_paths[0],
-        "first_message_sender": visualization_paths[1],
-        "love_counts": visualization_paths[2],
-        "average_messages_per_day": visualization_paths[3],
-        "sentiment_counts": visualization_paths[4],
-        "links_pie_chart": visualization_paths[5],
-        "top_emojis": visualization_paths[6],
-        "messages_count_per_sender": visualization_paths[7],
-        "message_activity_over_time": visualization_paths[8],
-        "message_activity_heatmap": visualization_paths[9],
-        "message_length_distribution": visualization_paths[10],
-        "daily_conversation_pattern": visualization_paths[11],
-        "response_time_distribution": visualization_paths[12]
-    }
+    # Calculate average messages per day
+    avg_messages_per_day = messages_per_day.mean()
+    
+    # Get first and last message dates
+    first_message_date = df['Date'].min()
+    last_message_date = df['Date'].max()
+    
+    # Common analysis
+    common_analysis = perform_analysis(df)
+    
+    # Calculate top participants
+    top_participants = df['Sender'].value_counts().to_dict()
+    
+    # Extract emojis
+    emoji_counts = df['Message'].str.findall(EMOJI_PATTERN).explode().value_counts().to_dict()
+    
+    # Extract links
+    links = df['Message'].str.extractall(URL_PATTERN)[0].value_counts().to_dict()
+    
+    # Type-specific analysis and visualizations
+    if is_group:
+        group_dynamics = analyze_group_dynamics(df)
+        type_specific_viz = generate_group_visualizations(df, config)
+        individual_metrics = None
+    else:
+        individual_metrics = analyze_individual_chat(df)
+        type_specific_viz = generate_individual_visualizations(df, config)
+        group_dynamics = None
+    
+    # Generate common visualizations
+    common_viz = generate_visualizations(df, config)
+    
+    # Combine all visualizations
+    all_visualizations = {**common_viz, **(type_specific_viz or {})}
+    
+    # Ensure dates are in datetime format before strftime
+    start_date = df['Date'].min().strftime('%Y-%m-%d') if isinstance(df['Date'].min(), pd.Timestamp) else df['Date'].min()
+    end_date = df['Date'].max().strftime('%Y-%m-%d') if isinstance(df['Date'].max(), pd.Timestamp) else df['Date'].max()
+    
+    return ChatAnalysis(
+        is_group=is_group,
+        participant_count=df['Sender'].nunique(),
+        total_messages=len(df),
+        analysis_period=(start_date, end_date),
+        participant_stats=common_analysis['top_participants'],
+        message_patterns=common_analysis,
+        sentiment_analysis=common_analysis['sentiment_counts'],
+        visualization_paths=all_visualizations,
+        top_participants=top_participants,
+        most_active_day=most_active_day,
+        emojis=emoji_counts,
+        links=links,
+        first_message_date=first_message_date,
+        last_message_date=last_message_date,
+        avg_messages_per_day=avg_messages_per_day,
+        group_dynamics=group_dynamics,
+        conversation_balance=individual_metrics,
+        interaction_network=group_dynamics['interaction_data'] if group_dynamics else None,
+        response_patterns=individual_metrics['avg_response_times'] if individual_metrics else None
+    )
 
-    return results
-
-def save_visualization(fig: plt.Figure, filename: str, config: VisualizationConfig) -> Path:
+def save_visualization(fig: Any, filename: str, config: VisualizationConfig) -> Path:
     """Save visualization to file and return the path."""
     output_path = config.output_dir / filename
-    fig.savefig(output_path, dpi=config.dpi, bbox_inches='tight')
-    plt.close(fig)
+    
+    # Handle WordCloud objects differently
+    if isinstance(fig, WordCloud):
+        fig.to_file(str(output_path))
+    else:
+        fig.savefig(output_path, dpi=config.dpi, bbox_inches='tight')
+        plt.close(fig)
+    
     return output_path
 
 def create_message_activity_heatmap(df: pd.DataFrame, config: VisualizationConfig) -> Path:
