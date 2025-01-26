@@ -11,9 +11,9 @@
     <style>
       body {
         background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+        min-height: 100vh;
         color: #fff;
         font-family: 'Segoe UI', Arial, sans-serif;
-        min-height: 100vh;
         padding: 2rem;
       }
 
@@ -29,18 +29,25 @@
       .description {
         text-align: center;
         font-size: 1.2rem;
-        max-width: 800px;
-        margin: 0 auto 3rem;
         color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 3rem;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.5;
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        background-color: rgba(255, 255, 255, 0.1);
       }
 
       .container {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 1.5rem;
-        justify-content: center;
-        max-width: 1400px;
+        max-width: 1800px;
         margin: 0 auto;
+        padding: 0 2rem;
       }
 
       .card {
@@ -62,10 +69,12 @@
       }
 
       .card h2 {
+        color: #fff;
         font-size: 1.5rem;
         margin-bottom: 1rem;
-        color: #fff;
         font-weight: 600;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 0.5rem;
       }
 
       .card p, .card li {
@@ -76,6 +85,17 @@
 
       .card ul, .card ol {
         padding-left: 1.2rem;
+        list-style: none;
+        margin-bottom: 0.5rem;
+      }
+
+      .visualization-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5rem;
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 0 2rem;
       }
 
       .visualization {
@@ -83,11 +103,11 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 16px;
-        padding: 1.5rem;
-        flex: 1 1 45%;
-        max-width: 600px;
+        padding: 2rem;
+        width: 100%;
         transition: all 0.3s ease;
         cursor: pointer;
+        margin-bottom: 0;
       }
 
       .visualization:hover {
@@ -143,6 +163,12 @@
       }
 
       /* Responsive adjustments */
+      @media (max-width: 1200px) {
+        .visualization-container {
+          grid-template-columns: 1fr;
+        }
+      }
+
       @media (max-width: 768px) {
         body {
           padding: 1rem;
@@ -154,6 +180,14 @@
 
         .card, .visualization {
           flex: 1 1 100%;
+        }
+
+        .container {
+          padding: 0 1rem;
+        }
+
+        .visualization-container {
+          padding: 0 1rem;
         }
       }
     </style>
@@ -220,13 +254,13 @@
         <h2>Last Message</h2>
         <p>{{ results.last_message_date.strftime('%d %B %Y') }}</p>
       </div>
-      <div class="card">
+      <div class="card" style="margin-bottom: 1.5rem;">
         <h2>Average Messages Per Day</h2>
         <p>{{ results.avg_messages_per_day|round }}</p>
       </div>
     </div>
     <!-- Here starts visualizations in image format -->
-    <div class="container">
+    <div class="visualization-container">
       <div
         class="visualization"
         onclick="window.location.href='/static/visuals/wordcloud.png';"
@@ -338,6 +372,48 @@
           class="img-fluid"
         />
       </div>
+      <div class="visualization" onclick="window.location.href='/static/visuals/message_length_distribution.png'">
+        <h2>Message Length</h2>
+        <img
+          src="/static/visuals/message_length_distribution.png"
+          alt="Message Length"
+          class="img-fluid"
+        />
+      </div>
+      <div class="visualization" onclick="window.location.href='/static/visuals/response_time_distribution.png'">
+        <h2>Response Time Distribution</h2>
+        <img
+          src="/static/visuals/response_time_distribution.png"
+          alt="Response Time Distribution"
+          class="img-fluid"
+        />
+      </div>
+      <div class="visualization" onclick="window.location.href='/static/visuals/daily_pattern.png'">
+        <h2>Daily Message Pattern</h2>
+        <img
+          src="/static/visuals/daily_pattern.png"
+          alt="Daily Message Pattern"
+          class="img-fluid"
+        />
+      </div>
     </div>
+    <footer style="
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background-color: #008080;
+      color: white;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 0.9em;">
+      <p style="margin: 0;">
+        Made with ❤️ by Google Jr | 
+        <a href="https://github.com/xeroxzen/chat-insight" 
+           style="color: white; text-decoration: underline;"
+           target="_blank">
+          Open Source on GitHub
+        </a>
+      </p>
+    </footer>
   </body>
 </html>
