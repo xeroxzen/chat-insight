@@ -201,6 +201,27 @@
     </p>
     <div class="container">
       <div class="card">
+        <h2>Chat Type</h2>
+        <p>{{ 'Group Chat' if results.is_group else 'Individual Chat' }}</p>
+        {% if results.is_group %}
+          <p>Number of Participants: {{ results.participant_count }}</p>
+        {% endif %}
+      </div>
+      
+      {% if results.is_group %}
+        <div class="card">
+          <h2>Group Activity Distribution</h2>
+          <p>Most Active Member: {{ results.group_dynamics.most_active_member }}</p>
+          <p>Least Active Member: {{ results.group_dynamics.least_active_member }}</p>
+        </div>
+      {% else %}
+        <div class="card">
+          <h2>Conversation Balance</h2>
+          <p>Message ratio: {{ results.conversation_balance.message_ratio }}</p>
+        </div>
+      {% endif %}
+      
+      <div class="card">
         <h2>Message Counts</h2>
         <ol>
           {% for participant, count in results.top_participants.items() %}
@@ -390,6 +411,33 @@
           class="img-fluid"
         />
       </div>
+      {% if results.is_group %}
+        <div class="visualization" onclick="window.location.href='/static/visuals/group_participation.png'">
+          <h2>Group Participation Distribution</h2>
+          <img
+            src="/static/visuals/group_participation.png"
+            alt="Group Participation Distribution"
+            class="img-fluid"
+          />
+        </div>
+        <div class="visualization" onclick="window.location.href='/static/visuals/group_interaction_network.png'">
+          <h2>Group Interaction Network</h2>
+          <img
+            src="/static/visuals/group_interaction_network.png"
+            alt="Group Interaction Network"
+            class="img-fluid"
+          />
+        </div>
+      {% else %}
+        <div class="visualization" onclick="window.location.href='/static/visuals/conversation_flow.png'">
+          <h2>Conversation Flow Analysis</h2>
+          <img
+            src="/static/visuals/conversation_flow.png"
+            alt="Conversation Flow Analysis"
+            class="img-fluid"
+          />
+        </div>
+      {% endif %}
     </div>
     <footer style="
       position: fixed;
