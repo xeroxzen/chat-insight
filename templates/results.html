@@ -202,8 +202,15 @@
     <div class="container">
       <div class="card">
         <h2>Message Counts</h2>
-        <p>Prie: {{ results.participant1_message_count }} messages</p>
-        <p>Google Jr: {{ results.participant2_message_count }} messages</p>
+        {% if results and results.message_counts %}
+            <ol>
+            {% for participant, count in results.message_counts.items() %}
+                <li>{{ participant }}: {{ count }} messages</li>
+            {% endfor %}
+            </ol>
+        {% else %}
+            <p>No message count data available</p>
+        {% endif %}
       </div>
       <div class="card">
         <h2>Most Active Day</h2>
@@ -296,12 +303,12 @@
       </div>
       <div
         class="visualization"
-        onclick="window.location.href='/static/visuals/love_counts.png'"
+        onclick="window.location.href='/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}';"
       >
-        <h2>Love Counts</h2>
+        <h2>{% if chat_type == 'romantic' %}Love Emoji Usage{% else %}Friendly Emoji Usage{% endif %}</h2>
         <img
-          src="/static/visuals/love_counts.png"
-          alt="Love Counts"
+          src="/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}"
+          alt="{% if chat_type == 'romantic' %}Love Emoji Counts{% else %}Friendly Emoji Usage{% endif %}"
           class="img-fluid"
         />
       </div>
