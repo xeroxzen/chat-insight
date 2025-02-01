@@ -13,7 +13,7 @@
         background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
         min-height: 100vh;
         color: #fff;
-        font-family: 'Segoe UI', Arial, sans-serif;
+        font-family: "Segoe UI", Arial, sans-serif;
         padding: 2rem;
       }
 
@@ -36,6 +36,7 @@
         margin-right: auto;
         line-height: 1.5;
         backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         padding: 20px;
         border-radius: 12px;
         background-color: rgba(255, 255, 255, 0.1);
@@ -53,6 +54,7 @@
       .card {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 16px;
         padding: 1.5rem;
@@ -77,13 +79,15 @@
         padding-bottom: 0.5rem;
       }
 
-      .card p, .card li {
+      .card p,
+      .card li {
         color: rgba(255, 255, 255, 0.9);
         margin-bottom: 0.5rem;
         font-size: 1.1rem;
       }
 
-      .card ul, .card ol {
+      .card ul,
+      .card ol {
         padding-left: 1.2rem;
         list-style: none;
         margin-bottom: 0.5rem;
@@ -101,6 +105,7 @@
       .visualization {
         background: rgba(255, 255, 255, 0.1);
         backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 16px;
         padding: 2rem;
@@ -178,7 +183,8 @@
           font-size: 2.5rem;
         }
 
-        .card, .visualization {
+        .card,
+        .visualization {
           flex: 1 1 100%;
         }
 
@@ -204,23 +210,27 @@
         <h2>Chat Type</h2>
         <p>{{ 'Group Chat' if results.is_group else 'Individual Chat' }}</p>
         {% if results.is_group %}
-          <p>Number of Participants: {{ results.participant_count }}</p>
+        <p>Number of Participants: {{ results.participant_count }}</p>
         {% endif %}
       </div>
-      
+
       {% if results.is_group %}
-        <div class="card">
-          <h2>Group Activity Distribution</h2>
-          <p>Most Active Member: {{ results.group_dynamics.most_active_member }}</p>
-          <p>Least Active Member: {{ results.group_dynamics.least_active_member }}</p>
-        </div>
+      <div class="card">
+        <h2>Group Activity Distribution</h2>
+        <p>
+          Most Active Member: {{ results.group_dynamics.most_active_member }}
+        </p>
+        <p>
+          Least Active Member: {{ results.group_dynamics.least_active_member }}
+        </p>
+      </div>
       {% else %}
-        <div class="card">
-          <h2>Conversation Balance</h2>
-          <p>Message ratio: {{ results.conversation_balance.message_ratio }}</p>
-        </div>
+      <div class="card">
+        <h2>Conversation Balance</h2>
+        <p>Message ratio: {{ results.conversation_balance.message_ratio }}</p>
+      </div>
       {% endif %}
-      
+
       <div class="card">
         <h2>Message Counts</h2>
         <ol>
@@ -235,23 +245,35 @@
       </div>
       <div class="card">
         <h2>Most Active Time</h2>
-        <p>{{ results.most_active_time if results.most_active_time else 'No data available' }}</p>
+        <p>
+          {% if results.most_active_time is not none %} {{
+          results.most_active_time }}:00 {% else %} No data available {% endif
+          %}
+        </p>
       </div>
       <div class="card">
         <h2>Most Commonly Used Words</h2>
+        {% if results.most_common_words %}
         <ul>
           {% for word, freq in results.most_common_words %}
           <li>{{ word }}: {{ freq }}</li>
           {% endfor %}
         </ul>
+        {% else %}
+        <p>No word frequency data available</p>
+        {% endif %}
       </div>
       <div class="card">
         <h2>Top Emojis</h2>
+        {% if results.emojis and results.emojis.items()|length > 0 %}
         <ul>
           {% for emoji, count in results.emojis.items() %}
           <li>{{ emoji }}: {{ count }}</li>
           {% endfor %}
         </ul>
+        {% else %}
+        <p>No emoji data available</p>
+        {% endif %}
       </div>
       <div class="card">
         <h2>Top Links</h2>
@@ -269,7 +291,7 @@
         <h2>Last Message</h2>
         <p>{{ results.last_message_date.strftime('%d %B %Y') }}</p>
       </div>
-      <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card" style="margin-bottom: 1.5rem">
         <h2>Average Messages Per Day</h2>
         <p>{{ results.avg_messages_per_day|round }}</p>
       </div>
@@ -311,9 +333,12 @@
       </div>
       <div
         class="visualization"
-        onclick="window.location.href='/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}';"
+        onclick="window.location.href='/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}'"
       >
-        <h2>{% if chat_type == 'romantic' %}Love Emoji Usage{% else %}Friendly Emoji Usage{% endif %}</h2>
+        <h2>
+          {% if chat_type == 'romantic' %}Love Emoji Usage{% else %}Friendly
+          Emoji Usage{% endif %}
+        </h2>
         <img
           src="/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}"
           alt="{% if chat_type == 'romantic' %}Love Emoji Counts{% else %}Friendly Emoji Usage{% endif %}"
@@ -387,7 +412,10 @@
           class="img-fluid"
         />
       </div>
-      <div class="visualization" onclick="window.location.href='/static/visuals/message_length_distribution.png'">
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/message_length_distribution.png'"
+      >
         <h2>Message Length</h2>
         <img
           src="/static/visuals/message_length_distribution.png"
@@ -395,7 +423,10 @@
           class="img-fluid"
         />
       </div>
-      <div class="visualization" onclick="window.location.href='/static/visuals/response_time_distribution.png'">
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/response_time_distribution.png'"
+      >
         <h2>Response Time Distribution</h2>
         <img
           src="/static/visuals/response_time_distribution.png"
@@ -403,7 +434,10 @@
           class="img-fluid"
         />
       </div>
-      <div class="visualization" onclick="window.location.href='/static/visuals/daily_pattern.png'">
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/daily_pattern.png'"
+      >
         <h2>Daily Message Pattern</h2>
         <img
           src="/static/visuals/daily_pattern.png"
@@ -412,47 +446,62 @@
         />
       </div>
       {% if results.is_group %}
-        <div class="visualization" onclick="window.location.href='/static/visuals/group_participation.png'">
-          <h2>Group Participation Distribution</h2>
-          <img
-            src="/static/visuals/group_participation.png"
-            alt="Group Participation Distribution"
-            class="img-fluid"
-          />
-        </div>
-        <div class="visualization" onclick="window.location.href='/static/visuals/group_interaction_network.png'">
-          <h2>Group Interaction Network</h2>
-          <img
-            src="/static/visuals/group_interaction_network.png"
-            alt="Group Interaction Network"
-            class="img-fluid"
-          />
-        </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/group_participation.png'"
+      >
+        <h2>Group Participation Distribution</h2>
+        <img
+          src="/static/visuals/group_participation.png"
+          alt="Group Participation Distribution"
+          class="img-fluid"
+        />
+      </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/group_interaction_network.png'"
+      >
+        <h2>Group Interaction Network</h2>
+        <img
+          src="/static/visuals/group_interaction_network.png"
+          alt="Group Interaction Network"
+          class="img-fluid"
+        />
+      </div>
       {% else %}
-        <div class="visualization" onclick="window.location.href='/static/visuals/conversation_flow.png'">
-          <h2>Conversation Flow Analysis</h2>
-          <img
-            src="/static/visuals/conversation_flow.png"
-            alt="Conversation Flow Analysis"
-            class="img-fluid"
-          />
-        </div>
+      <div
+        class="visualization"
+        onclick="window.location.href='/static/visuals/conversation_flow.png'"
+      >
+        <h2>Conversation Flow Analysis</h2>
+        <img
+          src="/static/visuals/conversation_flow.png"
+          alt="Conversation Flow Analysis"
+          class="img-fluid"
+        />
+      </div>
       {% endif %}
     </div>
-    <footer style="
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background-color: #008080;
-      color: white;
-      text-align: center;
-      padding: 10px 0;
-      font-size: 0.9em;">
-      <p style="margin: 0;">
-        Made with ❤️ by Google Jr | 
-        <a href="https://github.com/xeroxzen/chat-insight" 
-           style="color: white; text-decoration: underline;"
-           target="_blank">
+    <footer
+      style="
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        background-color: #008080;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+        font-size: 0.9em;
+      "
+    >
+      <p style="margin: 0">
+        Made with ❤️ by Google Jr |
+        <a
+          href="https://github.com/xeroxzen/chat-insight"
+          style="color: white; text-decoration: underline"
+          target="_blank"
+          rel="noopener"
+        >
           Open Source on GitHub
         </a>
       </p>
