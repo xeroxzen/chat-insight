@@ -40,7 +40,7 @@ DAY_START_HOUR = 6
 EXCLUDED_MESSAGES = [
     'joined', 'left', 'removed', 'changed', 'image omitted', 
     'video omitted', 'video call', 'voice call', 'audio omitted',
-    'missed voice', 'missed video', 'google jr'
+    'missed voice', 'missed video'
 ]
 
 # Add logger configuration
