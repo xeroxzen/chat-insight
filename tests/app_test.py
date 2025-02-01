@@ -15,9 +15,11 @@ client = TestClient(app)
 
 @pytest.fixture
 def mock_upload_file():
+    """Mock an upload file"""
     return Mock(spec=UploadFile, filename="test_chat.txt")
 
 def test_index_route():
+    """Test the index route"""
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
@@ -30,8 +32,8 @@ def create_mock_results():
             "message_ratio": 0.5
         },
         "group_dynamics": {
-            "most_active_member": "John Doe",
-            "least_active_member": "Jane Doe",
+            "most_active_member": "Google Jr",
+            "least_active_member": "LeBron James",
             "total_messages": 100
         },
         "time_analysis": {
@@ -43,8 +45,8 @@ def create_mock_results():
             "emoji_usage": {"😊": 10, "👍": 5}
         },
         "top_participants": {
-            "John": 50,
-            "Jane": 30
+            "Google Jr": 50,
+            "Prie": 30
         },
         "most_active_day": "2024-03-20",
         "first_message_date": "2024-03-01",
@@ -71,12 +73,14 @@ def create_mock_results():
     }
 
 def test_results_route():
+    """Test the results route"""
     mock_results = create_mock_results()
     response = client.get("/results", params={"results": json.dumps(mock_results)})
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
 
 def test_serve_visuals():
+    """Test the serve_visuals route"""
     # Create a test file in static/visuals
     os.makedirs("static/visuals", exist_ok=True)
     test_file_path = "static/visuals/test.png"
@@ -95,6 +99,7 @@ def test_serve_visuals():
 
 @pytest.mark.asyncio
 async def test_upload_invalid_file(mock_upload_file):
+    """Test the upload route with an invalid file"""
     mock_upload_file.filename = "invalid.zip"
     
     with patch("app.allowed_file", return_value=False):
@@ -108,6 +113,7 @@ async def test_upload_invalid_file(mock_upload_file):
 
 @pytest.mark.asyncio
 async def test_upload_valid_file(mock_upload_file):
+    """Test the upload route with a valid file"""
     mock_results = create_mock_results()
     
     with patch("app.allowed_file", return_value=True), \
