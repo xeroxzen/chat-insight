@@ -235,7 +235,7 @@
       </div>
       <div class="card">
         <h2>Most Active Time</h2>
-        <p>{{ results.most_active_time }} hours</p>
+        <p>{{ results.most_active_time if results.most_active_time else 'No data available' }}</p>
       </div>
       <div class="card">
         <h2>Most Commonly Used Words</h2>
