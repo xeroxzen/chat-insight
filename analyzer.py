@@ -204,7 +204,7 @@ def perform_analysis(df: pd.DataFrame) -> dict:
     # Update return dictionary
     analysis_results = {
         "most_active_day": most_active_day.date(),
-        "most_active_time": f"{most_active_time}:00",
+        "most_active_time": most_active_time,
         "most_common_words": most_common_words,
         "top_participants": top_participants.to_dict(),
         "first_message_date": df['Date'].min().date(),
@@ -528,29 +528,53 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
 @dataclass
 class ChatAnalysis:
     """Container for chat analysis results"""
-    is_group: bool
-    participant_count: int
-    total_messages: int
-    analysis_period: Tuple[str, str]  # (start_date, end_date)
-    participant_stats: Dict[str, Dict[str, Any]]
-    message_patterns: Dict[str, Any]
-    sentiment_analysis: Dict[str, Any]
-    visualization_paths: Dict[str, Path]
-    top_participants: Dict[str, int]
-    most_active_day: datetime
-    emojis: Dict[str, int]
-    links: Dict[str, int]
-    first_message_date: datetime
-    last_message_date: datetime
-    avg_messages_per_day: float
+    is_group: bool = True
+    participant_count: int = 0
+    total_messages: int = 0
+    analysis_period: Tuple[str, str] = ('', '')  # (start_date, end_date)
+    participant_stats: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    message_patterns: Dict[str, Any] = field(default_factory=dict)
+    sentiment_analysis: Dict[str, Any] = field(default_factory=dict)
+    visualization_paths: Dict[str, Path] = field(default_factory=dict)
+    top_participants: Dict[str, int] = field(default_factory=dict)
+    most_active_day: datetime = None
+    emojis: Dict[str, int] = field(default_factory=dict)
+    links: Dict[str, int] = field(default_factory=dict)
+    first_message_date: datetime = None
+    last_message_date: datetime = None
+    avg_messages_per_day: float = 0.0
     
     # Group-specific metrics
-    group_dynamics: Optional[Dict[str, Any]] = None
-    interaction_network: Optional[Dict[str, Any]] = None
+    group_dynamics: Optional[Dict[str, Any]] = field(default_factory=dict)
+    interaction_network: Optional[Dict[str, Any]] = field(default_factory=dict)
     
     # Individual-specific metrics
-    conversation_balance: Optional[Dict[str, Any]] = None
-    response_patterns: Optional[Dict[str, Any]] = None
+    conversation_balance: Optional[Dict[str, Any]] = field(default_factory=dict)
+    response_patterns: Optional[Dict[str, Any]] = field(default_factory=dict)
+    
+    def to_dict(self) -> dict:
+        """Convert analysis results to dictionary"""
+        return {
+            "is_group": self.is_group,
+            "participant_count": self.participant_count,
+            "total_messages": self.total_messages,
+            "analysis_period": self.analysis_period,
+            "participant_stats": self.participant_stats,
+            "message_patterns": self.message_patterns,
+            "sentiment_analysis": self.sentiment_analysis,
+            "visualization_paths": {k: str(v) for k, v in self.visualization_paths.items()},
+            "top_participants": self.top_participants,
+            "most_active_day": self.most_active_day.strftime('%Y-%m-%d') if self.most_active_day else None,
+            "emojis": self.emojis,
+            "links": self.links,
+            "first_message_date": self.first_message_date.strftime('%Y-%m-%d') if self.first_message_date else None,
+            "last_message_date": self.last_message_date.strftime('%Y-%m-%d') if self.last_message_date else None,
+            "avg_messages_per_day": self.avg_messages_per_day,
+            "group_dynamics": self.group_dynamics,
+            "interaction_network": self.interaction_network,
+            "conversation_balance": self.conversation_balance,
+            "response_patterns": self.response_patterns
+        }
 
 def determine_chat_type(df: pd.DataFrame) -> bool:
     """
@@ -659,82 +683,63 @@ def generate_individual_visualizations(df: pd.DataFrame, config: VisualizationCo
         "conversation_flow": flow_path
     }
 
-def analyze_chat_log(csv_file_path: str) -> ChatAnalysis:
-    """Main function to analyze chat logs."""
-    config = VisualizationConfig()
-    setup_output_directory(config)
+def analyze_chat_log(csv_file_path: str) -> dict:
+    """
+    Analyze the chat log and return results
     
-    # Read and preprocess data
-    df = read_chat_log(csv_file_path)
-    df = preprocess_data(df)
-    
-    # Determine chat type
-    is_group = determine_chat_type(df)
-    
-    # Calculate most active day
-    messages_per_day = df.groupby('Date').size()
-    most_active_day = messages_per_day.idxmax()
-    
-    # Calculate average messages per day
-    avg_messages_per_day = messages_per_day.mean()
-    
-    # Get first and last message dates
-    first_message_date = df['Date'].min()
-    last_message_date = df['Date'].max()
-    
-    # Common analysis
-    common_analysis = perform_analysis(df)
-    
-    # Calculate top participants
-    top_participants = df['Sender'].value_counts().to_dict()
-    
-    # Extract emojis
-    emoji_counts = df['Message'].str.findall(EMOJI_PATTERN).explode().value_counts().to_dict()
-    
-    # Extract links
-    links = df['Message'].str.extractall(URL_PATTERN)[0].value_counts().to_dict()
-    
-    # Type-specific analysis and visualizations
-    if is_group:
-        group_dynamics = analyze_group_dynamics(df)
-        type_specific_viz = generate_group_visualizations(df, config)
-        individual_metrics = None
-    else:
-        individual_metrics = analyze_individual_chat(df)
-        type_specific_viz = generate_individual_visualizations(df, config)
-        group_dynamics = None
-    
-    # Generate common visualizations
-    common_viz = generate_visualizations(df, config)
-    
-    # Combine all visualizations
-    all_visualizations = {**common_viz, **(type_specific_viz or {})}
-    
-    # Ensure dates are in datetime format before strftime
-    start_date = df['Date'].min().strftime('%Y-%m-%d') if isinstance(df['Date'].min(), pd.Timestamp) else df['Date'].min()
-    end_date = df['Date'].max().strftime('%Y-%m-%d') if isinstance(df['Date'].max(), pd.Timestamp) else df['Date'].max()
-    
-    return ChatAnalysis(
-        is_group=is_group,
-        participant_count=df['Sender'].nunique(),
-        total_messages=len(df),
-        analysis_period=(start_date, end_date),
-        participant_stats=common_analysis['top_participants'],
-        message_patterns=common_analysis,
-        sentiment_analysis=common_analysis['sentiment_counts'],
-        visualization_paths=all_visualizations,
-        top_participants=top_participants,
-        most_active_day=most_active_day,
-        emojis=emoji_counts,
-        links=links,
-        first_message_date=first_message_date,
-        last_message_date=last_message_date,
-        avg_messages_per_day=avg_messages_per_day,
-        group_dynamics=group_dynamics,
-        conversation_balance=individual_metrics,
-        interaction_network=group_dynamics['interaction_data'] if group_dynamics else None,
-        response_patterns=individual_metrics['avg_response_times'] if individual_metrics else None
-    )
+    Args:
+        csv_file_path (str): Path to the CSV file containing chat data
+        
+    Returns:
+        dict: Analysis results
+    """
+    try:
+        # Read and validate the CSV file
+        df = read_chat_log(csv_file_path)
+        
+        # Preprocess data
+        df = preprocess_data(df)
+        
+        # Determine if it's a group chat
+        is_group = determine_chat_type(df)
+        
+        # Create analysis object
+        analysis = ChatAnalysis()
+        
+        # Basic metrics
+        analysis.is_group = is_group
+        analysis.participant_count = df['Sender'].nunique()
+        analysis.total_messages = len(df)
+        analysis.first_message_date = df['Date'].min()
+        analysis.last_message_date = df['Date'].max()
+        
+        # Perform common analysis
+        common_results = perform_analysis(df)
+        
+        # Update analysis object with common results
+        analysis.most_active_day = common_results['most_active_day']
+        analysis.avg_messages_per_day = common_results['avg_messages_per_day']
+        analysis.top_participants = common_results['top_participants']
+        analysis.emojis = common_results.get('emojis', {})
+        analysis.links = common_results.get('links', {})
+        analysis.sentiment_analysis = common_results['sentiment_counts']
+        analysis.message_patterns = common_results
+        
+        # Group-specific analysis
+        if is_group:
+            group_results = analyze_group_dynamics(df)
+            analysis.group_dynamics = group_results
+            analysis.interaction_network = group_results.get('interaction_data', {})
+        else:
+            individual_results = analyze_individual_chat(df)
+            analysis.conversation_balance = individual_results
+            analysis.response_patterns = individual_results.get('avg_response_times', {})
+        
+        # Return results as dictionary
+        return analysis.to_dict()
+        
+    except Exception as e:
+        raise ValueError(f"Error analyzing chat log: {str(e)}")
 
 def save_visualization(fig: Any, filename: str, config: VisualizationConfig) -> Path:
     """Save visualization to file and return the path."""
