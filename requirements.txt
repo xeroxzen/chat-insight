@@ -15,6 +15,7 @@ httpcore==1.0.5
 httptools==0.6.1
 httpx==0.27.0
 idna==3.7
+iniconfig==2.0.0
 Jinja2==3.1.4
 joblib==1.4.2
 kiwisolver==1.4.5
@@ -29,10 +30,12 @@ orjson==3.10.5
 packaging==24.1
 pandas==2.2.2
 pillow==10.3.0
+pluggy==1.5.0
 pydantic==2.7.4
 pydantic_core==2.18.4
 Pygments==2.18.0
 pyparsing==3.1.2
+pytest==8.3.4
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.9
