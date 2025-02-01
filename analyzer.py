@@ -538,6 +538,8 @@ class ChatAnalysis:
     visualization_paths: Dict[str, Path] = field(default_factory=dict)
     top_participants: Dict[str, int] = field(default_factory=dict)
     most_active_day: datetime = None
+    most_active_time: int = None
+    most_common_words: List[Tuple[str, int]] = field(default_factory=list)
     emojis: Dict[str, int] = field(default_factory=dict)
     links: Dict[str, int] = field(default_factory=dict)
     first_message_date: datetime = None
@@ -565,6 +567,8 @@ class ChatAnalysis:
             "visualization_paths": {k: str(v) for k, v in self.visualization_paths.items()},
             "top_participants": self.top_participants,
             "most_active_day": self.most_active_day.strftime('%Y-%m-%d') if self.most_active_day else None,
+            "most_active_time": self.most_active_time,
+            "most_common_words": self.most_common_words,
             "emojis": self.emojis,
             "links": self.links,
             "first_message_date": self.first_message_date.strftime('%Y-%m-%d') if self.first_message_date else None,
@@ -718,6 +722,8 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         
         # Update analysis object with common results
         analysis.most_active_day = common_results['most_active_day']
+        analysis.most_active_time = common_results['most_active_time']
+        analysis.most_common_words = common_results['most_common_words']
         analysis.avg_messages_per_day = common_results['avg_messages_per_day']
         analysis.top_participants = common_results['top_participants']
         analysis.emojis = common_results.get('emojis', {})
@@ -739,7 +745,7 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         return analysis.to_dict()
         
     except Exception as e:
-        raise ValueError(f"Error analyzing chat log: {str(e)}")
+        raise ValueError(f"Error analyzing chat log: {str(e)}") from e
 
 def save_visualization(fig: Any, filename: str, config: VisualizationConfig) -> Path:
     """Save visualization to file and return the path."""
