@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy requirements file
 COPY requirements.txt .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies without hash verification
+RUN pip install --no-cache-dir --no-deps --ignore-installed -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
