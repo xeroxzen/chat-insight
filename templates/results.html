@@ -1,510 +1,544 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Analysis Results</title>
-    <link
-      href="https://stackpath.bootstrapcdn.com/bootstrap/5.3.0/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Insight</title>
     <style>
-      body {
-        background: #cce4c7;
-        min-height: 100vh;
-        color: #fff;
-        font-family: "Segoe UI", Arial, sans-serif;
-        padding: 2rem;
-      }
-
-      h1 {
-        font-size: 3.5rem;
-        font-weight: 700;
-        text-align: center;
-        margin-bottom: 2rem;
-        color: #008080;
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
-      }
-
-      .description {
-        text-align: center;
-        font-size: 1.2rem;
-        color: #333;
-        margin-bottom: 3rem;
-        max-width: 800px;
-        margin-left: auto;
-        margin-right: auto;
-        line-height: 1.5;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        padding: 20px;
-        border-radius: 12px;
-        background-color: #fff;
-      }
-
-      .container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-        max-width: 1800px;
-        margin: 0 auto;
-        padding: 0 2rem;
-      }
-
-      .card {
-        background: #e7e1e1;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid #ddd;
-        border-radius: 16px;
-        padding: 1.5rem;
-        flex: 1 1 300px;
-        max-width: 400px;
-        transition: all 0.3s ease;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      }
-
-      .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-        background: rgba(255, 255, 255, 0.15);
-      }
-
-      .card h2 {
-        color: #008080;
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-        font-weight: 600;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 0.5rem;
-      }
-
-      .card p,
-      .card li {
-        color: #333;
-        margin-bottom: 0.5rem;
-        font-size: 1.1rem;
-      }
-
-      .card ul,
-      .card ol {
-        padding-left: 1.2rem;
-        list-style: none;
-        margin-bottom: 0.5rem;
-      }
-
-      .visualization-container {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 5rem;
-        max-width: 1800px;
-        margin: 2rem auto;
-        padding: 0 2rem;
-      }
-
-      .visualization {
-        background: #fff;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid #ddd;
-        border-radius: 16px;
-        padding: 2rem;
-        width: 100%;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        margin-bottom: 0;
-      }
-
-      .visualization:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-      }
-
-      .visualization h2 {
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-        color: #075E54;
-      }
-
-      .visualization img {
-        width: 100%;
-        height: auto;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-      }
-
-      .visualization:hover img {
-        transform: scale(1.02);
-      }
-
-      /* Custom scrollbar */
-      ::-webkit-scrollbar {
-        width: 10px;
-      }
-
-      ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 5px;
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.4);
-      }
-
-      /* Links styling */
-      a {
-        color: #008080;
-        text-decoration: none;
-        transition: color 0.3s ease;
-      }
-
-      a:hover {
-        color: #008080;
-        text-decoration: underline;
-      }
-
-      /* Responsive adjustments */
-      @media (max-width: 1200px) {
-        .visualization-container {
-          grid-template-columns: 1fr;
+        :root {
+            --primary-color: #008080;
+            --secondary-color: #cce4c7;
+            --card-bg: #ffffff;
+            --text-primary: #333333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
         }
-      }
 
-      @media (max-width: 768px) {
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-          padding: 1rem;
+            background: linear-gradient(135deg, var(--secondary-color), #e8f5e9);
+            min-height: 100vh;
+            color: var(--text-primary);
+            font-family: "Segoe UI", Arial, sans-serif;
+            padding: 2rem;
+            line-height: 1.6;
         }
 
-        h1 {
-          font-size: 2.5rem;
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 0.8s ease-out;
         }
 
-        .card,
+        .header h1 {
+            font-size: 3.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px var(--shadow-color);
+        }
+
+        .description {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+        }
+
+        /* Card Grid Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            transition: all 0.3s ease;
+            cursor: grab;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px var(--shadow-color);
+        }
+
+        .card h2 {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        /* Word Cloud Style */
+        .word-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .word-tag {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            transition: transform 0.2s ease;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .word-tag:hover {
+            transform: scale(1.05);
+        }
+
+        /* Message List Styles */
+        .message-list {
+            padding-left: 1.2rem;
+        }
+
+        .message-list li {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            border-radius: 8px;
+            transition: transform 0.2s ease;
+        }
+
+        /* Emoji Cloud Styles */
+        .emoji-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .emoji-tag {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            transition: transform 0.2s ease;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .emoji-tag:hover {
+            transform: scale(1.05);
+        }
+
+        /* Chart Container Styles */
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .chart-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        /* Links Style */
+        .links-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .links-list li {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            border-radius: 8px;
+            transition: transform 0.2s ease;
+        }
+
+        .links-list li:hover {
+            transform: translateX(5px);
+        }
+
+        .links-list a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                min-height: 150px;
+            }
+        }
+
+        /* Drag and Drop Styles */
+        .card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        /* Enhanced Visualization Styles */
         .visualization {
-          flex: 1 1 100%;
+            margin-top: 3rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            max-width: 1800px;
+            margin: 2rem auto;
         }
 
-        .container {
-          padding: 0 1rem;
+        .chart-wrapper {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem; /* increased padding for better visibility */
+            min-height: 350px; /* added minimum height for a larger display */
+            box-shadow: 0 4px 6px var(--shadow-color);
+            transition: all 0.3s ease;
         }
 
-        .visualization-container {
-          padding: 0 1rem;
+        .chart-wrapper:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px var(--shadow-color);
         }
-      }
+
+        .chart-wrapper img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
     </style>
-  </head>
-  <body>
-    <h1>Chat Insight</h1>
-    <p class="description">
-      This app provides insights into chat interactions, analyzing message
-      counts, active times, and participant engagement to enhance communication
-      strategies.
-    </p>
-    <div class="container">
-      <div class="card">
-        <h2>Chat Type</h2>
-        <p>{{ 'Group Chat' if results.is_group else 'Individual Chat' }}</p>
+</head>
+<body>
+    <div class="header">
+        <h1>Chat Insight</h1>
+        <div class="description">
+            <p>This app provides insights into chat interactions, analyzing message counts, active times, and participant engagement to enhance communication strategies.</p>
+        </div>
+    </div>
+
+    <div class="grid-container">
+        <!-- Chat Type Card -->
+        <div class="card" draggable="true">
+            <h2>Chat Type</h2>
+            <p>{{ 'Group Chat' if results.is_group else 'Individual Chat' }}</p>
+            {% if results.is_group %}
+            <p>Number of Participants: {{ results.participant_count }}</p>
+            {% endif %}
+        </div>
+
         {% if results.is_group %}
-        <p>Number of Participants: {{ results.participant_count }}</p>
-        {% endif %}
-      </div>
-
-      {% if results.is_group %}
-      <div class="card">
-        <h2>Group Activity Distribution</h2>
-        <p>
-          Most Active Member: {{ results.group_dynamics.most_active_member }}
-        </p>
-        <p>
-          Least Active Member: {{ results.group_dynamics.least_active_member }}
-        </p>
-      </div>
-      {% else %}
-      <div class="card">
-        <h2>Conversation Balance</h2>
-        <p>Message ratio: {{ results.conversation_balance.message_ratio }}</p>
-      </div>
-      {% endif %}
-
-      <div class="card">
-        <h2>Message Counts</h2>
-        <ol>
-          {% for participant, count in results.top_participants.items() %}
-          <li>{{ participant }}: {{ count }}</li>
-          {% endfor %}
-        </ol>
-      </div>
-      <div class="card">
-        <h2>Most Active Day</h2>
-        <p>{{ results.most_active_day.strftime('%d %B %Y') }}</p>
-      </div>
-      <div class="card">
-        <h2>Most Active Time</h2>
-        <p>
-          {% if results.most_active_time is not none %} {{
-          results.most_active_time }}:00 {% else %} No data available {% endif
-          %}
-        </p>
-      </div>
-      <div class="card">
-        <h2>Most Commonly Used Words</h2>
-        {% if results.most_common_words %}
-        <ul>
-          {% for word, freq in results.most_common_words %}
-          <li>{{ word }}: {{ freq }}</li>
-          {% endfor %}
-        </ul>
+        <!-- Group Activity Distribution -->
+        <div class="card" draggable="true">
+            <h2>Group Activity Distribution</h2>
+            <p>Most Active Member: {{ results.group_dynamics.most_active_member }}</p>
+            <p>Least Active Member: {{ results.group_dynamics.least_active_member }}</p>
+        </div>
         {% else %}
-        <p>No word frequency data available</p>
+        <!-- Conversation Balance -->
+        <div class="card" draggable="true">
+            <h2>Conversation Balance</h2>
+            <p>Message ratio: {{ results.conversation_balance.message_ratio }}</p>
+        </div>
         {% endif %}
-      </div>
-      <div class="card">
-        <h2>Top Emojis</h2>
-        {% if results.emojis and results.emojis.items()|length > 0 %}
-        <ul>
-          {% for emoji, count in results.emojis.items() %}
-          <li>{{ emoji }}: {{ count }}</li>
-          {% endfor %}
-        </ul>
+
+        <!-- Message Counts Card -->
+        <div class="card" draggable="true">
+            <h2>Message Counts</h2>
+            <ol class="message-list">
+                {% for participant, count in results.top_participants.items() %}
+                <li>{{ participant }}: {{ count }}</li>
+                {% endfor %}
+            </ol>
+        </div>
+
+        <!-- Most Active Day Card -->
+        <div class="card" draggable="true">
+            <h2>Most Active Day</h2>
+            <p>{{ results.most_active_day.strftime('%d %B %Y') }}</p>
+        </div>
+
+        <!-- Most Active Time Card -->
+        <div class="card" draggable="true">
+            <h2>Most Active Time</h2>
+            <p>
+                {% if results.most_active_time is not none %}
+                {{ results.most_active_time }}:00
+                {% else %}
+                No data available
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Most Common Words Card -->
+        <div class="card" draggable="true">
+            <h2>Most Commonly Used Words</h2>
+            <div class="word-cloud">
+                {% if results.most_common_words %}
+                    {% for word, freq in results.most_common_words %}
+                        <span class="word-tag">{{ word }}: {{ freq }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p>No word frequency data available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Top Emojis Card -->
+        <div class="card" draggable="true">
+            <h2>Top Emojis</h2>
+            <div class="emoji-cloud">
+                {% if results.emojis and results.emojis.items()|length > 0 %}
+                    {% for emoji, count in results.emojis.items() %}
+                        <span class="emoji-tag">{{ emoji }}: {{ count }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p>No emoji data available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Links Card -->
+        <div class="card" draggable="true">
+            <h2>Top Links</h2>
+            <ul class="links-list">
+                {% for link, count in results.links.items() %}
+                    <li>
+                        <a href="{{ link }}" target="_blank">{{ link }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- First Message Card -->
+        <div class="card" draggable="true">
+            <h2>First Message</h2>
+            <p>{{ results.first_message_date.strftime('%d %B %Y') }}</p>
+        </div>
+
+        <!-- Last Message Card -->
+        <div class="card" draggable="true">
+            <h2>Last Message</h2>
+            <p>{{ results.last_message_date.strftime('%d %B %Y') }}</p>
+        </div>
+
+        <!-- Average Messages Per Day Card -->
+        <div class="card" draggable="true">
+            <h2>Average Messages Per Day</h2>
+            <p>{{ results.avg_messages_per_day|round }}</p>
+        </div>
+    </div>
+
+    <!-- Visualizations Section -->
+    <div class="visualization">
+        <!-- Word Cloud -->
+        <div class="chart-wrapper">
+            <h2>Word Cloud of Frequently Used Words</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/wordcloud.png" alt="Word Cloud" />
+            </div>
+        </div>
+
+        <!-- Average Messages -->
+        <div class="chart-wrapper">
+            <h2>Average Messages Sent per Day</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/average_messages_per_day.png" alt="Average Messages Sent per Day" />
+            </div>
+        </div>
+
+        <!-- First Message Sender -->
+        <div class="chart-wrapper">
+            <h2>First Message Sender</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/first_message_sender.png" alt="First Message Sender" />
+            </div>
+        </div>
+
+        <!-- Emoji Usage -->
+        <div class="chart-wrapper">
+            <h2>{% if chat_type == 'romantic' %}Love Emoji Usage{% else %}Friendly Emoji Usage{% endif %}</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}" 
+                     alt="{% if chat_type == 'romantic' %}Love Emoji Counts{% else %}Friendly Emoji Usage{% endif %}" />
+            </div>
+        </div>
+
+        <!-- Sentiment Counts -->
+        <div class="chart-wrapper">
+            <h2>Sentiment Counts</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/sentiment_counts.png" alt="Sentiment Counts" />
+            </div>
+        </div>
+
+        <!-- Links Shared -->
+        <div class="chart-wrapper">
+            <h2>Links Shared by Each Sender</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/links_shared_by_sender.png" alt="Links Shared by Each Sender" style="width:85%; transition: transform 0.2s ease; cursor: zoom-in;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" />
+            </div>
+        </div>
+
+        <!-- Top Emojis -->
+        <div class="chart-wrapper">
+            <h2>Top Emojis</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/top_emojis.png" alt="Top Emojis" />
+            </div>
+        </div>
+
+        <!-- Messages per User -->
+        <div class="chart-wrapper">
+            <h2>Messages sent per user</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/messages_count_per_sender.png" alt="Total messages per user" />
+            </div>
+        </div>
+
+        <!-- Message Activity Over Time -->
+        <div class="chart-wrapper">
+            <h2>Message Activity Over Time</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/message_activity_over_time.png" alt="Message Activity Over Time" />
+            </div>
+        </div>
+
+        <!-- Message Activity Heatmap -->
+        <div class="chart-wrapper">
+            <h2>Message Activity Heatmap</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/message_activity_heatmap.png" alt="Message Activity Heatmap" />
+            </div>
+        </div>
+
+        <!-- Message Length -->
+        <div class="chart-wrapper">
+            <h2>Message Length</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/message_length_distribution.png" alt="Message Length" />
+            </div>
+        </div>
+
+        <!-- Response Time Distribution -->
+        <div class="chart-wrapper">
+            <h2>Response Time Distribution</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/response_time_distribution.png" alt="Response Time Distribution" />
+            </div>
+        </div>
+
+        <!-- Daily Pattern -->
+        <div class="chart-wrapper">
+            <h2>Daily Message Pattern</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/daily_pattern.png" alt="Daily Message Pattern" />
+            </div>
+        </div>
+
+        {% if results.is_group %}
+        <!-- Group Participation -->
+        <div class="chart-wrapper">
+            <h2>Group Participation Distribution</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/group_participation.png" alt="Group Participation Distribution" />
+            </div>
+        </div>
+
+        <!-- Group Interaction Network -->
+        <div class="chart-wrapper">
+            <h2>Group Interaction Network</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/group_interaction_network.png" alt="Group Interaction Network" />
+            </div>
+        </div>
         {% else %}
-        <p>No emoji data available</p>
+        <!-- Conversation Flow -->
+        <div class="chart-wrapper">
+            <h2>Conversation Flow Analysis</h2>
+            <div class="chart-container">
+                <img src="/static/visuals/conversation_flow.png" alt="Conversation Flow Analysis" />
+            </div>
+        </div>
         {% endif %}
-      </div>
-      <div class="card">
-        <h2>Top Links</h2>
-        <ul>
-          {% for link, count in results.links.items() %}
-          <a href="{{ link }}" target="_blank">{{ link }}</a>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="card">
-        <h2>First Message</h2>
-        <p>{{ results.first_message_date.strftime('%d %B %Y') }}</p>
-      </div>
-      <div class="card">
-        <h2>Last Message</h2>
-        <p>{{ results.last_message_date.strftime('%d %B %Y') }}</p>
-      </div>
-      <div class="card" style="margin-bottom: 1.5rem">
-        <h2>Average Messages Per Day</h2>
-        <p>{{ results.avg_messages_per_day|round }}</p>
-      </div>
     </div>
-    <!-- Here starts visualizations in image format -->
-    <div class="visualization-container">
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/wordcloud.png';"
-      >
-        <h2>Word Cloud of Frequently Used Words</h2>
-        <img
-          src="/static/visuals/wordcloud.png"
-          alt="Word Cloud"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/average_messages_per_day.png'"
-      >
-        <h2>Average Messages Sent per Day</h2>
-        <img
-          src="/static/visuals/average_messages_per_day.png"
-          alt="Average Messages Sent per Day"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/first_message_sender.png'"
-      >
-        <h2>First Message Sender</h2>
-        <img
-          src="/static/visuals/first_message_sender.png"
-          alt="First Message Sender"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}'"
-      >
-        <h2>
-          {% if chat_type == 'romantic' %}Love Emoji Usage{% else %}Friendly
-          Emoji Usage{% endif %}
-        </h2>
-        <img
-          src="/static/visuals/{% if chat_type == 'romantic' %}love_counts.png{% else %}friendship_emoji_counts.png{% endif %}"
-          alt="{% if chat_type == 'romantic' %}Love Emoji Counts{% else %}Friendly Emoji Usage{% endif %}"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/sentiment_counts.png'"
-      >
-        <h2>Sentiment Counts</h2>
-        <img
-          src="/static/visuals/sentiment_counts.png"
-          alt="Sentiment Counts"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/links_shared_by_sender.png'"
-      >
-        <h2>Links Shared by Each Sender</h2>
-        <img
-          src="/static/visuals/links_shared_by_sender.png"
-          alt="Links Shared by Each Sender"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/top_emojis.png'"
-      >
-        <h2>Top Emojis</h2>
-        <img
-          src="/static/visuals/top_emojis.png"
-          alt="Top Emojis"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick=""
-        window.location.href="/static/visuals/messages_count_per_sender.png"
-      >
-        <h2>Messages sent per user</h2>
-        <img
-          src="/static/visuals/messages_count_per_sender.png"
-          alt="Total messages per user"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/message_activity_over_time.png'"
-      >
-        <h2>Message Activity Over Time</h2>
-        <img
-          src="/static/visuals/message_activity_over_time.png"
-          alt="Message Activity Over Time"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/message_activity_heatmap.png'"
-      >
-        <h2>Message Activity Heatmap</h2>
-        <img
-          src="/static/visuals/message_activity_heatmap.png"
-          alt="Message Activity Heatmap"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/message_length_distribution.png'"
-      >
-        <h2>Message Length</h2>
-        <img
-          src="/static/visuals/message_length_distribution.png"
-          alt="Message Length"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/response_time_distribution.png'"
-      >
-        <h2>Response Time Distribution</h2>
-        <img
-          src="/static/visuals/response_time_distribution.png"
-          alt="Response Time Distribution"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/daily_pattern.png'"
-      >
-        <h2>Daily Message Pattern</h2>
-        <img
-          src="/static/visuals/daily_pattern.png"
-          alt="Daily Message Pattern"
-          class="img-fluid"
-        />
-      </div>
-      {% if results.is_group %}
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/group_participation.png'"
-      >
-        <h2>Group Participation Distribution</h2>
-        <img
-          src="/static/visuals/group_participation.png"
-          alt="Group Participation Distribution"
-          class="img-fluid"
-        />
-      </div>
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/group_interaction_network.png'"
-      >
-        <h2>Group Interaction Network</h2>
-        <img
-          src="/static/visuals/group_interaction_network.png"
-          alt="Group Interaction Network"
-          class="img-fluid"
-        />
-      </div>
-      {% else %}
-      <div
-        class="visualization"
-        onclick="window.location.href='/static/visuals/conversation_flow.png'"
-      >
-        <h2>Conversation Flow Analysis</h2>
-        <img
-          src="/static/visuals/conversation_flow.png"
-          alt="Conversation Flow Analysis"
-          class="img-fluid"
-        />
-      </div>
-      {% endif %}
-    </div>
-    <footer
-      style="
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        background-color: #008080;
-        color: white;
-        text-align: center;
-        padding: 10px 0;
-        font-size: 0.9em;
-      "
-    >
-      <p style="margin: 0">
-        Made with ❤️ by Google Jr |
-        <a
-          href="https://github.com/xeroxzen/chat-insight"
-          style="color: white; text-decoration: underline"
-          target="_blank"
-          rel="noopener"
-        >
-          Open Source on GitHub
-        </a>
-      </p>
-    </footer>
-  </body>
+
+    <script>
+        // Drag and Drop Functionality
+        const cards = document.querySelectorAll('.card');
+        
+        cards.forEach(card => {
+            card.addEventListener('dragstart', () => {
+                card.classList.add('dragging');
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+        });
+
+        const gridContainer = document.querySelector('.grid-container');
+        
+        gridContainer.addEventListener('dragover', e => {
+            e.preventDefault();
+            const draggingCard = document.querySelector('.dragging');
+            const cards = [...gridContainer.querySelectorAll('.card:not(.dragging)')];
+            const closestCard = cards.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = e.clientY - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+
+            if (closestCard) {
+                gridContainer.insertBefore(draggingCard, closestCard);
+            } else {
+                gridContainer.appendChild(draggingCard);
+            }
+        });
+    </script>
+</body>
 </html>
