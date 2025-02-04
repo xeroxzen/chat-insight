@@ -1,59 +1,435 @@
+/* Base Variables */
+:root {
+  --primary: #008080;
+  --primary-light: #00a3a3;
+  --primary-dark: #006666;
+  --background: #f0f8ff;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --white: #ffffff;
+  --error: #ff4444;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+}
+
+/* Core Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatAnimation {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes gradientAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes particleFloat {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+
+@keyframes containerGlow {
+  0% { transform: scale(1) translate(0, 0); opacity: 0.5; }
+  100% { transform: scale(1.2) translate(10px, 10px); opacity: 0.8; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+@keyframes footerGradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Base Styles */
 body {
-        font-family: Arial, sans-serif;
-        background-color: #f0f8ff;
-        color: #333;
-        min-height: 100vh;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-      }
-      .container {
-        text-align: center;
-        max-width: 600px;
-        width: 100%;
-      }
-      h1 {
-        color: #008080;
-        font-size: 3.5em;
-        margin-bottom: 20px;
-      }
-      p {
-        font-size: 1.1em;
-        margin-bottom: 30px;
-        color: #666;
-        line-height: 1.5;
-      }
-      .upload-container {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
-        border: 2px dashed #008080;
-        border-radius: 10px;
-        background-color: white;
-      }
-      input[type="file"] {
-        padding: 10px;
-      }
-      button {
-        background-color: #008080;
-        color: white;
-        padding: 12px 24px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 1em;
-        transition: background-color 0.3s ease;
-      }
-      button:hover {
-        background-color: #006666;
-      }
-      .error {
-        color: red;
-        font-weight: bold;
-        margin-top: 20px;
-      }
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(-45deg, #f0f8ff, #e6f3ff, #e0f2f1, #e0f7fa);
+  background-size: 400% 400%;
+  animation: gradientAnimation 15s ease infinite;
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background Effects */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,128,128,0.1) 0%, transparent 70%);
+  z-index: -1;
+  animation: floatAnimation 10s infinite ease-in-out;
+}
+
+body::before {
+  top: -100px;
+  left: -100px;
+}
+
+body::after {
+  bottom: -100px;
+  right: -100px;
+  animation-delay: -5s;
+}
+
+/* Floating Particles */
+.particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: rgba(0, 128, 128, 0.15);
+  border-radius: 50%;
+  animation: particleFloat 15s infinite linear;
+}
+
+.particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+.particle:nth-child(2) { left: 20%; animation-delay: -2s; }
+.particle:nth-child(3) { left: 30%; animation-delay: -4s; }
+.particle:nth-child(4) { left: 40%; animation-delay: -6s; }
+.particle:nth-child(5) { left: 50%; animation-delay: -8s; }
+.particle:nth-child(6) { left: 60%; animation-delay: -10s; }
+.particle:nth-child(7) { left: 70%; animation-delay: -12s; }
+.particle:nth-child(8) { left: 80%; animation-delay: -14s; }
+
+/* Main Container */
+.container {
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 1s ease-out;
+  margin-bottom: 60px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.container::before,
+.container::after {
+  content: '';
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,128,128,0.1) 0%, transparent 70%);
+  z-index: -1;
+  animation: containerGlow 8s infinite alternate;
+}
+
+.container::before {
+  top: -100px;
+  left: -100px;
+  animation-delay: -4s;
+}
+
+.container::after {
+  bottom: -100px;
+  right: -100px;
+}
+
+/* Typography */
+h1 {
+  color: var(--primary);
+  font-size: 3.5em;
+  font-weight: 700;
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+h1::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+}
+
+p {
+  font-size: 1.2em;
+  margin-bottom: 30px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Form Elements */
+form {
+  width: 100%;
+}
+
+/* Upload Container */
+.upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  border: 3px dashed var(--primary-light);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.upload-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 2px;
+  background: linear-gradient(45deg, var(--primary-light), var(--primary), var(--primary-light));
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.upload-container:hover {
+  transform: translateY(-5px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.upload-container::after {
+  content: '📤 Drop your file here or click to select';
+  position: absolute;
+  top: 10px;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+/* File Input */
+input[type="file"] {
+  width: 100%;
+  padding: 30px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+input[type="file"]::file-selector-button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: 2px solid var(--primary);
+  background: white;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 15px;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--primary);
+  color: white;
+}
+
+/* Button */
+button {
+  background: linear-gradient(45deg, var(--primary), var(--primary-light));
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+  max-width: 300px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+  z-index: -1;
+}
+
+button:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(45deg, var(--primary-dark), var(--primary));
+}
+
+button:hover::before {
+  transform: translateX(100%);
+}
+
+button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Upload Icon */
+.upload-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--primary);
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+/* Error Message */
+.error {
+  color: var(--error);
+  font-weight: 500;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: rgba(255,68,68,0.1);
+  border-radius: 8px;
+  border-left: 4px solid var(--error);
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Footer */
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(90deg, var(--primary-dark), var(--primary), var(--primary-dark));
+  background-size: 200% 100%;
+  color: white;
+  text-align: center;
+  padding: 15px 0;
+  font-size: 0.9em;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: footerGradient 10s linear infinite;
+}
+
+footer p {
+  margin: 0;
+  color: white;
+  font-size: 0.9em;
+}
+
+footer a {
+  color: white;
+  text-decoration: none;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+footer a::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  bottom: -2px;
+  left: 0;
+  background: white;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+footer a:hover::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+      padding: 20px;
+      margin: 10px;
+  }
+
+  h1 {
+      font-size: 2.5em;
+  }
+
+  .upload-container {
+      padding: 20px;
+  }
+
+  button {
+      padding: 12px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+      padding: 10px;
+  }
+
+  h1 {
+      font-size: 2em;
+  }
+
+  p {
+      font-size: 1em;
+  }
+
+  .upload-container {
+      padding: 15px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+  }
+}
