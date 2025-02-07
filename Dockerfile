@@ -7,8 +7,12 @@ WORKDIR /app
 # Copy requirements file
 COPY requirements.txt .
 
-# Install dependencies without hash verification
-RUN pip install --no-cache-dir --no-deps --ignore-installed -r requirements.txt
+# Installing dependencies without hash verification to avoid problems with the slim image
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir --no-deps --ignore-installed -r requirements.txt \
+    --index-url https://pypi.org/simple \
+    --timeout 100
+
 
 # Copy the rest of the application
 COPY . .
