@@ -605,6 +605,7 @@ class ChatAnalysis:
     most_active_day: str = None  # Changed to str
     most_active_time: int = None
     most_common_words: List[Tuple[str, int]] = field(default_factory=list)
+    stop_words = set(stopwords.words('english')).union({'im', 'like', 'ill', 'the', 'will', 'edited', 'dont'})
     emojis: Dict[str, int] = field(default_factory=dict)
     links: Dict[str, int] = field(default_factory=dict)
     first_message_date: str = None  # Changed to str
