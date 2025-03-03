@@ -736,6 +736,7 @@
       const spinnerContainer = document.getElementById("spinnerContainer");
       const images = document.querySelectorAll(".chart-container img");
       let loadedImages = 0;
+      let failedImages = 0;
 
       function showSpinner() {
         spinnerContainer.style.display = "flex";
@@ -745,27 +746,46 @@
         spinnerContainer.style.display = "none";
       }
 
+      function checkAllImagesLoaded() {
+        if (loadedImages + failedImages === images.length) {
+          hideSpinner();
+        }
+      }
+
       // Show spinner when page loads
       showSpinner();
 
-      // Track image loading
-      images.forEach((img) => {
-        if (img.complete) {
-          loadedImages++;
-        } else {
-          img.addEventListener("load", () => {
-            loadedImages++;
-            if (loadedImages === images.length) {
-              hideSpinner();
-            }
-          });
-        }
-      });
-
-      // If all images are already loaded, hide spinner
-      if (loadedImages === images.length) {
+      // If there are no images, hide spinner immediately
+      if (images.length === 0) {
         hideSpinner();
+      } else {
+        // Track image loading
+        images.forEach((img) => {
+          if (img.complete) {
+            loadedImages++;
+            checkAllImagesLoaded();
+          } else {
+            img.addEventListener("load", () => {
+              loadedImages++;
+              checkAllImagesLoaded();
+            });
+
+            img.addEventListener("error", () => {
+              failedImages++;
+              checkAllImagesLoaded();
+            });
+          }
+        });
       }
+
+      // Handle New Analysis button click
+      document
+        .querySelector(".new-analysis-btn")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          showSpinner();
+          window.location.href = "/";
+        });
     </script>
   </body>
 </html>
