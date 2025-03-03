@@ -1,25 +1,81 @@
 import os
 import json
 import sys
+import logging
 from pathlib import Path
+import secrets
+from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 # Place the current directory to Python path to avoid dir related errors
 sys.path.append(str(Path(__file__).parent))
 
 from parser import parse_chat_log
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
-from datetime import datetime
+from starlette.middleware.sessions import SessionMiddleware
 
 from analyzer import analyze_chat_log
 from file_handler import allowed_file, handle_upload
+from session_manager import SessionManager
+from rate_limiter import RateLimiter
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+# Generate a secure secret key for session management
+SECRET_KEY = secrets.token_urlsafe(32)
+
+# Security headers middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        return response
 
 app = FastAPI()
 
-# Ensure directories exist
+# Initialize session manager and rate limiter
+session_manager = SessionManager(SECRET_KEY)
+rate_limiter = RateLimiter()
+
+# Add middleware
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SECRET_KEY,
+    session_cookie="chat_insight_session",
+    max_age=24 * 60 * 60,  # 24 hours
+    same_site="lax",  # Protect against CSRF
+    path="/"  # Make cookie available for all paths
+)
+
+# Add CORS middleware with strict settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Add trusted host middleware
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]  # In production, replace with specific domains
+)
+
+# Ensure base directories exist
 UPLOAD_FOLDER = "uploads"
 STATIC_FOLDER = "static"
 VISUALS_FOLDER = "static/visuals"
@@ -71,12 +127,59 @@ def standardize_results(results: dict) -> dict:
             
     return results
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions and return appropriate responses."""
+    if exc.status_code == 401:
+        # For session expired, redirect to home page
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": "Your session has expired. Please try again."}
+        )
+    elif exc.status_code == 429:
+        # For rate limiting
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": "Too many requests. Please try again later."}
+        )
+    else:
+        # For other errors
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": str(exc.detail)}
+        )
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    try:
+        # Get or create user session
+        session = session_manager.get_user_session(request)
+        
+        # Check rate limit
+        if not rate_limiter.check_rate_limit(request):
+            raise HTTPException(status_code=429, detail="Too many requests")
+        
+        return templates.TemplateResponse("index.html", {"request": request})
+    except Exception as e:
+        logger.error(f"Error in index route: {str(e)}")
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": "An unexpected error occurred. Please try again."}
+        )
 
 @app.get("/results")
 async def read_root(request: Request):
+    # Check session validity
+    if not session_manager.is_session_valid(request):
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    # Check rate limit
+    if not rate_limiter.check_rate_limit(request):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    
+    # Extend session
+    session_manager.extend_session(request)
+    
     results_str = request.query_params.get("results", "{}")
     try:
         results = json.loads(results_str)
@@ -87,17 +190,52 @@ async def read_root(request: Request):
 
 @app.get("/visuals/{filename}")
 async def serve_visuals(request: Request, filename: str):
-    return FileResponse(f"static/visuals/{filename}")
+    # Check session validity
+    if not session_manager.is_session_valid(request):
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    # Check rate limit
+    if not rate_limiter.check_rate_limit(request):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    
+    # Extend session
+    session_manager.extend_session(request)
+    
+    # Get user session
+    session = session_manager.get_user_session(request)
+    user_dirs = session_manager.get_user_directories(session["user_id"])
+    
+    # Check if file exists in user's directory
+    file_path = user_dirs["visuals"] / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(str(file_path))
 
 @app.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     try:
+        # Check session validity
+        if not session_manager.is_session_valid(request):
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        # Check rate limit
+        if not rate_limiter.check_rate_limit(request):
+            raise HTTPException(status_code=429, detail="Too many requests")
+        
+        # Extend session
+        session_manager.extend_session(request)
+        
+        # Get user session and file paths
+        session = session_manager.get_user_session(request)
+        file_paths = session_manager.get_user_file_paths(session["user_id"], file.filename)
+        
         if not allowed_file(file.filename):
             return templates.TemplateResponse(
                 request, "index.html", {"error": "Invalid file format"}
             )
 
-        txt_file_path, csv_file_path = handle_upload(file)
+        txt_file_path, csv_file_path = handle_upload(file, file_paths)
         
         # Add logging to check file contents
         with open(txt_file_path, 'r', encoding='utf-8') as f:
@@ -109,7 +247,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
                 )
         
         try:
-            parse_chat_log(txt_file_path, csv_file_path)
+            parse_chat_log(str(txt_file_path), str(csv_file_path))
         except Exception as e:
             return templates.TemplateResponse(
                 request, "index.html",
@@ -117,7 +255,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             )
             
         try:
-            analysis_results = analyze_chat_log(csv_file_path)
+            analysis_results = analyze_chat_log(str(csv_file_path), file_paths["visuals"])
         except ValueError as e:
             return templates.TemplateResponse(
                 request, "index.html",
@@ -127,19 +265,36 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         # Standardize results before sending to template
         standardized_results = standardize_results(analysis_results)
         
+        # Get the relative paths for visualizations
+        visualization_paths = {}
+        for key, path in standardized_results.get("visualization_paths", {}).items():
+            if isinstance(path, (str, Path)):
+                # Convert absolute path to relative path from visuals directory
+                try:
+                    relative_path = Path(path).relative_to(file_paths["visuals"])
+                    visualization_paths[key] = str(relative_path)
+                except ValueError:
+                    logger.error(f"Could not get relative path for {key}: {path}")
+                    visualization_paths[key] = str(path)
+        
         return templates.TemplateResponse(request, "results.html", {
             "results": standardized_results,
-            "request": request
+            "request": request,
+            "visualization_paths": visualization_paths
         })
         
     except Exception as e:
+        logger.error(f"Error in upload route: {str(e)}")
         return templates.TemplateResponse(
             request, "index.html",
             {"error": f"An unexpected error occurred: {str(e)}"}
         )
 
+@app.on_event("startup")
+async def startup_event():
+    """Clean up old sessions on startup"""
+    session_manager.cleanup_old_sessions()
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8001)
