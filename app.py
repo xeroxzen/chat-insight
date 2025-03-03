@@ -273,9 +273,15 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
                 try:
                     relative_path = Path(path).relative_to(file_paths["visuals"])
                     visualization_paths[key] = str(relative_path)
+                    logger.info(f"Visualization path for {key}: {relative_path}")
                 except ValueError:
                     logger.error(f"Could not get relative path for {key}: {path}")
                     visualization_paths[key] = str(path)
+        
+        # Log all visualization paths being passed to template
+        logger.info("All visualization paths being passed to template:")
+        for key, path in visualization_paths.items():
+            logger.info(f"{key}: {path}")
         
         return templates.TemplateResponse(request, "results.html", {
             "results": standardized_results,
