@@ -33,6 +33,11 @@ class VisualizationConfig:
     output_dir: Path = Path('static/visuals')
     dpi: int = 300
 
+    def set_output_dir(self, output_dir: Path):
+        """Set the output directory for visualizations"""
+        self.output_dir = output_dir
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
 # Add constants
 EMOJI_PATTERN = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F900-\U0001F9FF]'
 URL_PATTERN = r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
@@ -753,9 +758,13 @@ def generate_individual_visualizations(df: pd.DataFrame, config: VisualizationCo
         "conversation_flow": flow_path
     }
 
-def analyze_chat_log(csv_file_path: str) -> dict:
+def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> dict:
     """
     Analyze the chat log and return results
+    
+    Args:
+        csv_file_path: Path to the CSV file containing chat data
+        output_dir: Optional path to user-specific visualization directory
     """
     try:
         # Read and validate the CSV file
@@ -780,6 +789,8 @@ def analyze_chat_log(csv_file_path: str) -> dict:
         
         # Create visualization config
         config = VisualizationConfig()
+        if output_dir:
+            config.set_output_dir(output_dir)
         setup_output_directory(config)
         
         # Generate visualizations
