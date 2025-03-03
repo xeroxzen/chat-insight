@@ -5,6 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat Insight</title>
     <link rel="stylesheet" href="../static/css/style.css" />
+    <style>
+      .spinner-container {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #008080;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .spinner-text {
+        position: absolute;
+        margin-top: 100px;
+        color: #008080;
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -13,15 +53,31 @@
         Transform your WhatsApp conversations into beautiful visualizations and
         meaningful insights with just one click.
       </p>
-      <form action="/upload" method="post" enctype="multipart/form-data">
+      <form
+        action="/upload"
+        method="post"
+        enctype="multipart/form-data"
+        id="uploadForm"
+      >
         <div class="upload-container">
-          <input type="file" name="file" accept=".zip" required />
+          <input
+            type="file"
+            name="file"
+            accept=".zip"
+            required
+            title="Select WhatsApp chat export ZIP file"
+          />
           <button type="submit">Upload and Analyze</button>
         </div>
       </form>
       {% if error %}
       <p class="error">{{ error }}</p>
       {% endif %}
+    </div>
+
+    <div class="spinner-container" id="spinnerContainer">
+      <div class="spinner"></div>
+      <div class="spinner-text">Analyzing your chat data...</div>
     </div>
 
     <footer
@@ -42,10 +98,19 @@
           href="https://github.com/xeroxzen/chat-insight"
           style="color: white; text-decoration: underline"
           target="_blank"
+          rel="noopener"
         >
           Open Source on GitHub
         </a>
       </p>
     </footer>
+
+    <script>
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", function () {
+          document.getElementById("spinnerContainer").style.display = "flex";
+        });
+    </script>
   </body>
 </html>
