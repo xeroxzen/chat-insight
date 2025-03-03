@@ -33,13 +33,18 @@
         text-align: center;
         margin-bottom: 3rem;
         animation: fadeIn 0.8s ease-out;
+        position: relative;
       }
 
       .header h1 {
         font-size: 3.5rem;
         color: var(--primary-color);
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
         text-shadow: 2px 2px 4px var(--shadow-color);
+      }
+
+      .header-actions {
+        margin-bottom: 2rem;
       }
 
       .description {
@@ -199,8 +204,17 @@
           padding: 1rem;
         }
 
+        .header {
+          margin-bottom: 2rem;
+        }
+
         .header h1 {
           font-size: 2.5rem;
+          margin-bottom: 1rem;
+        }
+
+        .header-actions {
+          margin-bottom: 1.5rem;
         }
 
         .grid-container {
@@ -209,6 +223,29 @@
 
         .card {
           min-height: 150px;
+        }
+
+        .new-analysis-btn {
+          padding: 8px 16px;
+          font-size: 0.9em;
+          border-radius: 20px;
+        }
+
+        .description {
+          margin-top: 1rem;
+        }
+      }
+
+      /* Small Mobile Screens */
+      @media (max-width: 480px) {
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .new-analysis-btn {
+          padding: 6px 12px;
+          font-size: 0.8em;
+          border-radius: 15px;
         }
       }
 
@@ -262,6 +299,25 @@
         align-items: center;
       }
 
+      /* New Analysis Button */
+      .new-analysis-btn {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: bold;
+        box-shadow: 0 2px 4px var(--shadow-color);
+        transition: all 0.3s ease;
+        display: inline-block;
+      }
+
+      .new-analysis-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px var(--shadow-color);
+        background-color: #006666;
+      }
+
       .spinner {
         width: 50px;
         height: 50px;
@@ -297,6 +353,9 @@
 
     <div class="header">
       <h1>Chat Insight</h1>
+      <div class="header-actions">
+        <a href="/" class="new-analysis-btn">New Analysis</a>
+      </div>
       <div class="description">
         <p>
           This app provides insights into chat interactions, analyzing message
