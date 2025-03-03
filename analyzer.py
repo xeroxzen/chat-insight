@@ -286,6 +286,7 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
     """Generate visualizations from the chat log."""
     try:
         visualizations = {}
+        logger.info(f"Generating visualizations in directory: {config.output_dir}")
         
         # Add MessageLength column if it doesn't exist
         if 'MessageLength' not in df.columns:
@@ -301,6 +302,7 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         ).generate(' '.join(df['Message']))
         
         visualizations['wordcloud'] = save_visualization(wordcloud, 'wordcloud.png', config)
+        logger.info(f"Saved wordcloud to: {visualizations['wordcloud']}")
         
         # First message sender analysis
         df_filtered = df[df['Time'] >= pd.to_datetime('06:00:00').time()]
@@ -326,87 +328,9 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.ylabel('Message Length (characters)')
         plt.xticks(rotation=45)
         plt.tight_layout()
-        visualizations['message_length'] = save_visualization(plt.gcf(), 'message_length_distribution.png', config)
+        visualizations['message_length_distribution'] = save_visualization(plt.gcf(), 'message_length_distribution.png', config)
         plt.close()
         
-        # Love counts visualization with chat type handling
-        if chat_type.lower() == 'romantic':
-            try:
-                love_patterns = ['❤️', '💕', '💗', '💓', '💖']
-                love_counts = pd.Series({
-                    pattern: df['Message'].str.count(pattern).sum() 
-                    for pattern in love_patterns
-                })
-                
-                if not love_counts.empty and love_counts.sum() > 0:
-                    plt.figure(figsize=config.figure_sizes['default'])
-                    love_counts.plot(kind='bar', color=['red', 'pink', 'magenta', 'crimson', 'deeppink'])
-                    plt.title('Love Emoji Usage')
-                    plt.xlabel('Emoji Type')
-                    plt.ylabel('Count')
-                    plt.xticks(rotation=45)
-                    love_counts_path = config.output_dir / 'love_counts.png'
-                    plt.savefig(love_counts_path, bbox_inches='tight')
-                    plt.close()
-                else:
-                    plt.figure(figsize=config.figure_sizes['default'])
-                    plt.text(0.5, 0.5, 'No love emojis found in the chat', 
-                            horizontalalignment='center',
-                            verticalalignment='center')
-                    plt.axis('off')
-                    love_counts_path = config.output_dir / 'love_counts.png'
-                    plt.savefig(love_counts_path, bbox_inches='tight')
-                    plt.close()
-            except Exception as e:
-                print(f"Error generating love counts visualization: {e}")
-                plt.figure(figsize=config.figure_sizes['default'])
-                plt.text(0.5, 0.5, 'Unable to generate love emoji visualization', 
-                        horizontalalignment='center',
-                        verticalalignment='center')
-                plt.axis('off')
-                love_counts_path = config.output_dir / 'love_counts.png'
-                plt.savefig(love_counts_path, bbox_inches='tight')
-                plt.close()
-        else:
-            # For non-romantic chats, generate a friendship emoji analysis instead
-            try:
-                friendship_patterns = ['😊', '😄', '👍', '🤝', '🙌', '✌️', '🎉', '🤗']
-                friendship_counts = pd.Series({
-                    pattern: df['Message'].str.count(pattern).sum() 
-                    for pattern in friendship_patterns
-                })
-                
-                if not friendship_counts.empty and friendship_counts.sum() > 0:
-                    plt.figure(figsize=config.figure_sizes['default'])
-                    friendship_counts.plot(kind='bar', color=['gold', 'orange', 'dodgerblue', 'mediumseagreen', 
-                                                            'cornflowerblue', 'mediumpurple', 'coral', 'lightseagreen'])
-                    plt.title('Friendly Emoji Usage')
-                    plt.xlabel('Emoji Type')
-                    plt.ylabel('Count')
-                    plt.xticks(rotation=45)
-                    love_counts_path = config.output_dir / 'friendship_emoji_counts.png'
-                    plt.savefig(love_counts_path, bbox_inches='tight')
-                    plt.close()
-                else:
-                    plt.figure(figsize=config.figure_sizes['default'])
-                    plt.text(0.5, 0.5, 'No friendly emojis found in the chat', 
-                            horizontalalignment='center',
-                            verticalalignment='center')
-                    plt.axis('off')
-                    love_counts_path = config.output_dir / 'friendship_emoji_counts.png'
-                    plt.savefig(love_counts_path, bbox_inches='tight')
-                    plt.close()
-            except Exception as e:
-                print(f"Error generating friendship emoji visualization: {e}")
-                plt.figure(figsize=config.figure_sizes['default'])
-                plt.text(0.5, 0.5, 'Unable to generate friendship emoji visualization', 
-                        horizontalalignment='center',
-                        verticalalignment='center')
-                plt.axis('off')
-                love_counts_path = config.output_dir / 'friendship_emoji_counts.png'
-                plt.savefig(love_counts_path, bbox_inches='tight')
-                plt.close()
-
         # Average messages per day by sender
         avg_messages_per_day_by_sender = df.groupby('Sender')['Date'].value_counts().groupby('Sender').mean()
         
@@ -417,11 +341,7 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.ylabel('Average Number of Messages per Day')
         plt.xticks(rotation=45)
         plt.tight_layout()
-
-        # Save the figure
-        avg_messages_graph_image_path = config.output_dir / 'average_messages_per_day.png'
-        os.makedirs(os.path.dirname(avg_messages_graph_image_path), exist_ok=True)
-        plt.savefig(avg_messages_graph_image_path)
+        visualizations['average_messages_per_day'] = save_visualization(plt.gcf(), 'average_messages_per_day.png', config)
         plt.close()
         
         # Sentiment counts
@@ -432,36 +352,22 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.xlabel('Sentiment')
         plt.ylabel('Number of Messages')
         plt.tight_layout()
-        
-        # Save the figure
-        sentiment_counts_graph_path = config.output_dir / 'sentiment_counts.png'
-        os.makedirs(os.path.dirname(sentiment_counts_graph_path), exist_ok=True)
-        plt.savefig(sentiment_counts_graph_path)
+        visualizations['sentiment_counts'] = save_visualization(plt.gcf(), 'sentiment_counts.png', config)
         plt.close()
-
-        # Calculate the number of links shared by each sender
+        
+        # Links shared by sender
         links_shared = df[df['Message'].str.contains('http[s]?://')]['Sender'].value_counts()
-
-        # Create a pie chart for links shared
-        plt.figure(figsize=(8, 8))  # Adjust size for pie chart
+        plt.figure(figsize=(8, 8))
         plt.pie(links_shared, labels=links_shared.index, autopct='%1.1f%%', startangle=90)
         plt.title('Links Shared by Each Sender')
-        plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        plt.axis('equal')
         plt.tight_layout()
-
-        # Save the figure
-        links_pie_chart_path = config.output_dir / 'links_shared_by_sender.png'
-        os.makedirs(os.path.dirname(links_pie_chart_path), exist_ok=True)
-        plt.savefig(links_pie_chart_path)
+        visualizations['links_shared_by_sender'] = save_visualization(plt.gcf(), 'links_shared_by_sender.png', config)
         plt.close()
-
-        # Count occurrences of each emoji in the messages
+        
+        # Top emojis
         emoji_counts = df['Message'].str.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F900-\U0001F9FF]').explode().value_counts()
-
-        # Get the top 10 emojis
         top_10_emojis = emoji_counts.head(10)
-
-        # Create a bar chart for the top 10 emojis
         plt.figure(figsize=(10, 6))
         top_10_emojis.plot(kind='bar', color=['red', 'green', 'blue', 'yellow', 'purple', 'orange', 'pink', 'brown', 'grey', 'black'])
         plt.title('Top 10 Emojis Used')
@@ -469,34 +375,11 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.ylabel('Count')
         plt.xticks(rotation=45)
         plt.tight_layout()
-
-        # Save the figure
-        top_emojis_graph_path = config.output_dir / 'top_emojis.png'
-        os.makedirs(os.path.dirname(top_emojis_graph_path), exist_ok=True)
-        plt.savefig(top_emojis_graph_path)
+        visualizations['top_emojis'] = save_visualization(plt.gcf(), 'top_emojis.png', config)
         plt.close()
-
-        # Count total messages
-        total_messages_count = len(df)
-
-        # Create a bar chart for total messages count
-        plt.figure(figsize=(8, 6))
-        plt.bar(['Total Messages'], [total_messages_count], color='lightblue')
-        plt.title('Total Messages Count')
-        plt.ylabel('Number of Messages')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-
-        # Save the figure
-        total_messages_graph_path = config.output_dir / 'total_messages_count.png'
-        os.makedirs(os.path.dirname(total_messages_graph_path), exist_ok=True)
-        plt.savefig(total_messages_graph_path)
-        plt.close()
-
-        # Count the number of messages per sender
+        
+        # Messages per sender
         messages_count_per_sender = df['Sender'].value_counts()
-
-        # Create a bar chart for messages count per sender
         plt.figure(figsize=(10, 6))
         messages_count_per_sender.plot(kind='bar', color=['lightblue', 'yellow'])
         plt.title('Total Messages Count per Sender')
@@ -504,21 +387,12 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.ylabel('Number of Messages')
         plt.xticks(rotation=45)
         plt.tight_layout()
-
-        # Save the figure
-        messages_count_graph_path = config.output_dir / 'messages_count_per_sender.png'
-        os.makedirs(os.path.dirname(messages_count_graph_path), exist_ok=True)
-        plt.savefig(messages_count_graph_path)
+        visualizations['messages_count_per_sender'] = save_visualization(plt.gcf(), 'messages_count_per_sender.png', config)
         plt.close()
         
-        """Line Chart of Message Activity Over Time"""
+        # Message activity over time
         df['DateTime'] = pd.to_datetime(df['Date'].astype(str) + ' ' + df['Time'].astype(str))
-        df['Date'] = df['DateTime'].dt.date
-        df['Time'] = df['DateTime'].dt.time
-        
-        # Group by date and count messages
         message_activity = df.groupby('Date')['Message'].count()
-        
         plt.figure(figsize=(10, 6))
         message_activity.plot(kind='line', marker='o', color='skyblue')
         plt.title('Message Activity Over Time')
@@ -526,47 +400,34 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.ylabel('Number of Messages')
         plt.grid(True)
         plt.tight_layout()
-
-        # Save the figure
-        message_activity_graph_path = config.output_dir / 'message_activity_over_time.png'
-        os.makedirs(os.path.dirname(message_activity_graph_path), exist_ok=True)
-        plt.savefig(message_activity_graph_path)
+        visualizations['message_activity_over_time'] = save_visualization(plt.gcf(), 'message_activity_over_time.png', config)
         plt.close()
         
-        """Heatmap to Display Message Activity by Hour and Day of the Week"""
-        
-        # Step 1: Combine Date and Time into a single datetime column
-        df['Date'] = df['Date'].astype(str)
-        df['Time'] = df['Time'].astype(str)
-        df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-
-        # Step 2: Extract hour and day of the week
+        # Message activity heatmap
         df['Hour'] = df['DateTime'].dt.hour
         df['DayOfWeek'] = df['DateTime'].dt.day_name()
-
-        # Step 3: Create a pivot table
         heatmap_data = df.pivot_table(index='DayOfWeek', columns='Hour', values='Message', aggfunc='count', fill_value=0)
-
-        # Reorder days of the week
         ordered_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         heatmap_data = heatmap_data.reindex(ordered_days)
-
-        # Step 4: Plot the heatmap
         plt.figure(figsize=(12, 6))
         sns.heatmap(heatmap_data, cmap='YlGnBu', annot=True, fmt='d')
         plt.title('Message Activity by Hour and Day of the Week')
         plt.xlabel('Hour of the Day')
         plt.ylabel('Day of the Week')
-
-        # Save the figure
-        message_activity_heatmap_path = config.output_dir / 'message_activity_heatmap.png'
-        os.makedirs(os.path.dirname(message_activity_heatmap_path), exist_ok=True)
-        plt.savefig(message_activity_heatmap_path)
+        visualizations['message_activity_heatmap'] = save_visualization(plt.gcf(), 'message_activity_heatmap.png', config)
         plt.close()
-
-        # New visualizations
         
-        # 1. Daily Conversation Pattern
+        # Response time distribution
+        df_sorted = df.sort_values('DateTime')
+        response_times = df_sorted['DateTime'].diff().dt.total_seconds() / 60
+        plt.figure(figsize=config.figure_sizes['default'])
+        sns.histplot(data=response_times[response_times < 60], bins=30)
+        plt.title('Response Time Distribution (within 1 hour)')
+        plt.xlabel('Response Time (minutes)')
+        visualizations['response_time_distribution'] = save_visualization(plt.gcf(), 'response_time_distribution.png', config)
+        plt.close()
+        
+        # Daily pattern
         daily_pattern = df.groupby([df['DateTime'].dt.hour, 'Sender'])['Message'].count().unstack()
         plt.figure(figsize=config.figure_sizes['default'])
         daily_pattern.plot(kind='line', marker='o')
@@ -574,21 +435,44 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.xlabel('Hour of Day')
         plt.ylabel('Number of Messages')
         plt.legend(title='Sender')
-        daily_pattern_path = config.output_dir / 'daily_pattern.png'
-        plt.savefig(daily_pattern_path)
+        visualizations['daily_pattern'] = save_visualization(plt.gcf(), 'daily_pattern.png', config)
         plt.close()
         
-        # 2. Response Time Distribution
-        plt.figure(figsize=config.figure_sizes['default'])
-        df_sorted = df.sort_values('DateTime')
-        response_times = df_sorted['DateTime'].diff().dt.total_seconds() / 60  # Convert to minutes
-        sns.histplot(data=response_times[response_times < 60], bins=30)  # Show responses within 1 hour
-        plt.title('Response Time Distribution (within 1 hour)')
-        plt.xlabel('Response Time (minutes)')
-        response_time_path = config.output_dir / 'response_time_distribution.png'
-        plt.savefig(response_time_path)
-        plt.close()
-
+        # Group-specific visualizations
+        if chat_type == 'friends':
+            # Group participation
+            top_15_senders = df['Sender'].value_counts().head(15)
+            plt.figure(figsize=config.figure_sizes['default'])
+            sns.barplot(x=top_15_senders.index, y=top_15_senders.values)
+            plt.title('Top 15 Group Participation Distribution')
+            plt.xticks(rotation=45, ha='right')
+            visualizations['group_participation'] = save_visualization(plt.gcf(), 'group_participation.png', config)
+            plt.close()
+            
+            # Group interaction network
+            df_filtered = df[df['Sender'].isin(top_15_senders.index)]
+            G = nx.from_pandas_edgelist(
+                df_filtered.sort_values('DateTime').assign(Next_Sender=lambda x: x['Sender'].shift(-1))
+                .groupby(['Sender', 'Next_Sender']).size().reset_index(name='weight'),
+                'Sender', 'Next_Sender', 'weight'
+            )
+            pos = nx.spring_layout(G)
+            plt.figure(figsize=config.figure_sizes['default'])
+            nx.draw(G, pos, with_labels=True, node_color='lightblue', 
+                    node_size=1000, font_size=8)
+            visualizations['group_interaction_network'] = save_visualization(plt.gcf(), 'group_interaction_network.png', config)
+            plt.close()
+        else:
+            # Conversation flow for individual chats
+            plt.figure(figsize=config.figure_sizes['default'])
+            timeline = df.set_index('DateTime')['Sender'].astype('category').cat.codes
+            plt.plot(timeline.index, timeline.values, 'o-')
+            plt.title('Conversation Flow')
+            plt.ylabel('Participant')
+            plt.yticks([0, 1], df['Sender'].unique())
+            visualizations['conversation_flow'] = save_visualization(plt.gcf(), 'conversation_flow.png', config)
+            plt.close()
+        
         return visualizations
         
     except Exception as e:
@@ -855,6 +739,7 @@ def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> d
 def save_visualization(fig: Any, filename: str, config: VisualizationConfig) -> Path:
     """Save visualization to file and return the path."""
     output_path = config.output_dir / filename
+    logger.info(f"Saving visualization: {filename} to {output_path}")
     
     # Handle WordCloud objects differently
     if isinstance(fig, WordCloud):
