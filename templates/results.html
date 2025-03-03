@@ -737,6 +737,7 @@
       const images = document.querySelectorAll(".chart-container img");
       let loadedImages = 0;
       let failedImages = 0;
+      let navigationTimeout;
 
       function showSpinner() {
         spinnerContainer.style.display = "flex";
@@ -776,6 +777,11 @@
             });
           }
         });
+
+        // Fallback timeout to hide spinner after 5 seconds
+        setTimeout(() => {
+          hideSpinner();
+        }, 5000);
       }
 
       // Handle New Analysis button click
@@ -783,8 +789,15 @@
         .querySelector(".new-analysis-btn")
         .addEventListener("click", function (e) {
           e.preventDefault();
+
+          // Show spinner
           showSpinner();
-          window.location.href = "/";
+
+          // Set a timeout to ensure spinner is hidden after 3 seconds
+          setTimeout(() => {
+            hideSpinner();
+            window.location.href = "/";
+          }, 3000);
         });
     </script>
   </body>
