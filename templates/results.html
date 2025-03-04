@@ -737,13 +737,16 @@
       const images = document.querySelectorAll(".chart-container img");
       let loadedImages = 0;
       let failedImages = 0;
-      let navigationTimeout;
+      let spinnerTimeout;
 
       function showSpinner() {
         spinnerContainer.style.display = "flex";
       }
 
       function hideSpinner() {
+        if (spinnerTimeout) {
+          clearTimeout(spinnerTimeout);
+        }
         spinnerContainer.style.display = "none";
       }
 
@@ -779,7 +782,7 @@
         });
 
         // Fallback timeout to hide spinner after 5 seconds
-        setTimeout(() => {
+        spinnerTimeout = setTimeout(() => {
           hideSpinner();
         }, 5000);
       }
@@ -790,14 +793,15 @@
         .addEventListener("click", function (e) {
           e.preventDefault();
 
-          // Show spinner
-          showSpinner();
-
-          // Set a timeout to ensure spinner is hidden after 3 seconds
-          setTimeout(() => {
-            hideSpinner();
+          // On mobile, navigate directly without showing spinner
+          if (window.innerWidth <= 768) {
             window.location.href = "/";
-          }, 3000);
+            return;
+          }
+
+          // On desktop, show spinner and navigate
+          showSpinner();
+          window.location.href = "/";
         });
     </script>
   </body>
