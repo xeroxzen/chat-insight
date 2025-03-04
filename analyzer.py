@@ -725,7 +725,7 @@ def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> d
             individual_viz = generate_individual_visualizations(df, config)
             visualization_paths.update(individual_viz)
         
-        # Create message activity heatmap
+        # Message activity heatmap
         heatmap_path = create_message_activity_heatmap(df, config)
         visualization_paths['heatmap'] = heatmap_path
         
@@ -741,7 +741,7 @@ def save_visualization(fig: Any, filename: str, config: VisualizationConfig) -> 
     output_path = config.output_dir / filename
     logger.info(f"Saving visualization: {filename} to {output_path}")
     
-    # Handle WordCloud objects differently
+    # Need to handle WordCloud objects differently
     if isinstance(fig, WordCloud):
         fig.to_file(str(output_path))
     else:
