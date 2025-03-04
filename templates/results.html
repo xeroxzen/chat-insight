@@ -45,6 +45,7 @@
 
       .header-actions {
         margin-bottom: 2rem;
+        display: none;
       }
 
       .description {
@@ -215,6 +216,7 @@
 
         .header-actions {
           margin-bottom: 1.5rem;
+          display: none;
         }
 
         .grid-container {
@@ -793,14 +795,14 @@
         .addEventListener("click", function (e) {
           e.preventDefault();
 
-          // On mobile, navigate directly without showing spinner
+          // On mobile, navigate directly without any spinner
           if (window.innerWidth <= 768) {
             window.location.href = "/";
             return;
           }
 
           // On desktop, show spinner and navigate
-          showSpinner();
+          spinnerContainer.style.display = "flex";
           window.location.href = "/";
         });
     </script>
