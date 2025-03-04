@@ -139,10 +139,31 @@
     </footer>
 
     <script>
+      const spinnerContainer = document.getElementById("spinnerContainer");
+      let spinnerTimeout;
+
+      function showSpinner() {
+        spinnerContainer.style.display = "flex";
+        // Set a fallback timeout to hide spinner after 30 seconds
+        spinnerTimeout = setTimeout(() => {
+          hideSpinner();
+        }, 30000);
+      }
+
+      function hideSpinner() {
+        if (spinnerTimeout) {
+          clearTimeout(spinnerTimeout);
+        }
+        spinnerContainer.style.display = "none";
+      }
+
       document
         .getElementById("uploadForm")
-        .addEventListener("submit", function () {
-          document.getElementById("spinnerContainer").style.display = "flex";
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          showSpinner();
+          // Submit the form after showing spinner
+          this.submit();
         });
     </script>
   </body>
