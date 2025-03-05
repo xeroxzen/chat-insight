@@ -66,8 +66,12 @@
             accept=".zip"
             required
             title="Select WhatsApp chat export ZIP file"
+            id="fileInput"
           />
           <button type="submit">Upload and Analyze</button>
+        </div>
+        <div id="fileWarning" class="error" style="display: none">
+          Please upload a file with a .zip extension
         </div>
       </form>
       {% if error %}
@@ -106,6 +110,20 @@
     </footer>
 
     <script>
+      document
+        .getElementById("fileInput")
+        .addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          const warningDiv = document.getElementById("fileWarning");
+
+          if (file && !file.name.toLowerCase().endsWith(".zip")) {
+            warningDiv.style.display = "block";
+            e.target.value = ""; // Clear the file input
+          } else {
+            warningDiv.style.display = "none";
+          }
+        });
+
       document
         .getElementById("uploadForm")
         .addEventListener("submit", function () {
