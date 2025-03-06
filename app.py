@@ -171,7 +171,10 @@ async def index(request: Request):
 async def read_root(request: Request):
     # Check session validity
     if not session_manager.is_session_valid(request):
-        raise HTTPException(status_code=401, detail="Session expired")
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": "Your session has expired. Please upload your chat file again."}
+        )
     
     # Check rate limit
     if not rate_limiter.check_rate_limit(request):
