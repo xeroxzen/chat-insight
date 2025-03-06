@@ -2,7 +2,7 @@ name: Create and Publish a Docker Image
 
 on:
   push:
-    branches: ["add_kubernetes_manifests"]
+    branches: ["main"]
 
 jobs:
   build-and-push-image:
