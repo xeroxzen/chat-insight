@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-insights
+  namespace: chat-insights
+  labels:
+    app: chat-insights
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-insights
+  template:
+    metadata:
+      labels:
+        app: chat-insights
+    spec:
+      containers:
+      - name: chat-insights
+        image: andilejaden/chatinsight
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 8000
+            name: http-web-port
+        volumeMounts:
+          - name: uploads-volume
+            mountPath: /app/uploads
+      volumes:
+        - name: uploads-volume
+          emptyDir:
+            sizeLimit: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-insights-service
+  namespace: chat-insights
+spec:
+  selector:
+    app: chat-insights
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: http-web-port
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: chat-insights
+  namespace: chat-insights
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: chatinsights.app
+      http:
+        paths:
+          - path: /?(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: chat-insights-service
+                port:
+                  name: http
+
