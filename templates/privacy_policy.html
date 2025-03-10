@@ -9,6 +9,16 @@
       href="{{ url_for('static', path='css/styles.css') }}"
     />
     <style>
+      .header {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+      .header h1 {
+        font-size: 3.5rem;
+        color: #008080;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+      }
       .privacy-container {
         max-width: 800px;
         margin: 0 auto;
@@ -51,6 +61,9 @@
     </style>
   </head>
   <body>
+    <div class="header">
+      <h1>Chat Insight</h1>
+    </div>
     <div class="privacy-container">
       <h1>Privacy Policy</h1>
 
