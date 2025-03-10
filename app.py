@@ -229,6 +229,19 @@ async def serve_visuals(request: Request, filename: str):
     
     return FileResponse(str(file_path))
 
+@app.get("/privacy-policy", response_class=HTMLResponse)
+async def privacy_policy(request: Request):
+    """Serve the privacy policy page."""
+    try:
+        # No need to check session validity or rate limit for public page
+        return templates.TemplateResponse("privacy_policy.html", {"request": request})
+    except Exception as e:
+        logger.error(f"Error in privacy policy route: {str(e)}")
+        return templates.TemplateResponse(
+            "index.html",
+            {"request": request, "error": "An unexpected error occurred. Please try again."}
+        )
+
 @app.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     try:
