@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
+from contextlib import asynccontextmanager
 
 # Place the current directory to Python path to avoid dir related errors
 sys.path.append(str(Path(__file__).parent))
@@ -43,11 +44,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
         return response
 
-app = FastAPI()
-
 # Initialize session manager and rate limiter
 session_manager = SessionManager(SECRET_KEY)
 rate_limiter = RateLimiter()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown events"""
+    # Startup: Clean up old sessions
+    session_manager.cleanup_old_sessions()
+    yield
+    # Shutdown: Any cleanup code would go here
+
+app = FastAPI(lifespan=lifespan)
 
 # Add middleware
 app.add_middleware(SecurityHeadersMiddleware)
@@ -133,20 +142,23 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     if exc.status_code == 401:
         # For session expired, redirect to home page
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {"request": request, "error": "Your session has expired. Please try again."}
+            {"error": "Your session has expired. Please try again."}
         )
     elif exc.status_code == 429:
         # For rate limiting
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {"request": request, "error": "Too many requests. Please try again later."}
+            {"error": "Too many requests. Please try again later."}
         )
     else:
         # For other errors
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {"request": request, "error": str(exc.detail)}
+            {"error": str(exc.detail)}
         )
 
 @app.get("/", response_class=HTMLResponse)
@@ -159,12 +171,13 @@ async def index(request: Request):
         if not rate_limiter.check_rate_limit(request):
             raise HTTPException(status_code=429, detail="Too many requests")
         
-        return templates.TemplateResponse("index.html", {"request": request})
+        return templates.TemplateResponse(request, "index.html", {})
     except Exception as e:
         logger.error(f"Error in index route: {str(e)}")
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {"request": request, "error": "An unexpected error occurred. Please try again."}
+            {"error": "An unexpected error occurred. Please try again."}
         )
 
 @app.get("/results")
@@ -172,8 +185,9 @@ async def read_root(request: Request):
     # Check session validity
     if not session_manager.is_session_valid(request):
         return templates.TemplateResponse(
+            request,
             "index.html",
-            {"request": request, "error": "Your session has expired. Please upload your chat file again."}
+            {"error": "Your session has expired. Please upload your chat file again."}
         )
     
     # Check rate limit
@@ -288,7 +302,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         
         return templates.TemplateResponse(request, "results.html", {
             "results": standardized_results,
-            "request": request,
             "visualization_paths": visualization_paths
         })
         
@@ -298,11 +311,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             request, "index.html",
             {"error": f"An unexpected error occurred: {str(e)}"}
         )
-
-@app.on_event("startup")
-async def startup_event():
-    """Clean up old sessions on startup"""
-    session_manager.cleanup_old_sessions()
 
 if __name__ == "__main__":
     import uvicorn
