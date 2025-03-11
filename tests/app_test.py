@@ -71,7 +71,7 @@ def create_mock_results(is_group=True, message_count=100, avg_messages=25.5):
             "peak_activity_day": "Monday"
         },
         "avg_messages_per_day": avg_messages,
-        # Add visualization paths for template rendering
+        # Adding visualization paths for template rendering
         "visualization_paths": {
             "wordcloud": "/visuals/wordcloud.png",
             "activity_heatmap": "/visuals/activity_heatmap.png",
@@ -105,14 +105,14 @@ def test_index_route():
 
 def test_standardize_results():
     """Test the standardize_results function directly"""
-    # Test with complete data
+    # Testing with complete data
     complete_data = create_mock_results()
     standardized = standardize_results(complete_data)
     assert isinstance(standardized["first_message_date"], datetime)
     assert isinstance(standardized["last_message_date"], datetime)
     assert "emojis" in standardized
     
-    # Test with missing data
+    # Testing with missing data
     incomplete_data = {"is_group": True}
     standardized = standardize_results(incomplete_data)
     assert "links" in standardized
@@ -122,7 +122,7 @@ def test_standardize_results():
     assert isinstance(standardized["first_message_date"], datetime)
     assert isinstance(standardized["last_message_date"], datetime)
     
-    # Test with empty data
+    # Testing with empty data
     empty_data = {}
     standardized = standardize_results(empty_data)
     assert standardized == {}
@@ -131,15 +131,15 @@ def test_allowed_file():
     """Test the allowed_file function directly"""
     from app import allowed_file
     
-    # Test valid extensions
+    # Testing valid extensions
     assert allowed_file("test.zip") is True
     
-    # Test invalid extensions
+    # Testing invalid extensions
     assert allowed_file("test.txt") is False
     assert allowed_file("test.exe") is False
     assert allowed_file("test") is False
     
-    # Test case insensitivity
+    # Testing case insensitivity
     assert allowed_file("test.ZIP") is True
 
 class TestFileUpload:
@@ -170,7 +170,7 @@ class TestFileUpload:
     
     def test_session_handling(self):
         """Test session handling during upload"""
-        # Test with valid session
+        # Testing with valid session
         with patch("app.session_manager.is_session_valid", return_value=True), \
              patch("app.session_manager.extend_session"):
             
@@ -180,7 +180,7 @@ class TestFileUpload:
             )
             assert response.status_code == 200
         
-        # Test with invalid session
+        # Testing with invalid session
         with patch("app.session_manager.is_session_valid", return_value=False), \
              patch("app.session_manager.extend_session"):
             
@@ -188,8 +188,7 @@ class TestFileUpload:
                 "/upload",
                 files={"file": ("test.zip", b"content", "application/zip")}
             )
-            assert response.status_code == 200  # The app returns 200 with an error message
-            # In a real app, this should return 401, but we're testing the actual behavior
+            assert response.status_code == 200
     
     def test_rate_limiting(self):
         """Test rate limiting during upload"""
@@ -200,8 +199,7 @@ class TestFileUpload:
                 "/upload",
                 files={"file": ("test.zip", b"content", "application/zip")}
             )
-            assert response.status_code == 200  # The app returns 200 with an error message
-            # In a real app, this should return 429, but we're testing the actual behavior
+            assert response.status_code == 200
 
 class TestResultsRoute:
     """Test the results route"""
@@ -214,7 +212,7 @@ class TestResultsRoute:
              patch("app.session_manager.extend_session"), \
              patch("app.templates.TemplateResponse") as mock_template:
             
-            # Set up the mock to return a simple response
+            # Setting up the mock to return a simple response
             mock_instance = mock_template.return_value
             mock_instance.status_code = 200
             mock_instance.headers = {"content-type": "text/html; charset=utf-8"}
@@ -223,7 +221,7 @@ class TestResultsRoute:
             response = client.get("/results", params={"results": json.dumps(mock_data)})
             assert response.status_code == 200
             
-            # Verify that TemplateResponse was called with the correct template
+            # Verifying that TemplateResponse was called with the correct template
             mock_template.assert_called_once()
             assert "results.html" in mock_template.call_args[0] or "results.html" in str(mock_template.call_args)
     
@@ -233,7 +231,7 @@ class TestResultsRoute:
              patch("app.session_manager.extend_session"), \
              patch("app.templates.TemplateResponse") as mock_template:
             
-            # Set up the mock to return a simple response
+            # Setting up the mock to return a simple response
             mock_instance = mock_template.return_value
             mock_instance.status_code = 200
             mock_instance.headers = {"content-type": "text/html; charset=utf-8"}
@@ -242,18 +240,18 @@ class TestResultsRoute:
             response = client.get("/results", params={"results": "{}"})
             assert response.status_code == 200
             
-            # Verify that TemplateResponse was called with the correct template
+            # Verifying that TemplateResponse was called with the correct template
             mock_template.assert_called_once()
             assert "results.html" in mock_template.call_args[0] or "results.html" in str(mock_template.call_args)
     
     def test_session_handling(self):
         """Test session handling for results route"""
-        # Test with valid session
+        # Testing with valid session
         with patch("app.session_manager.is_session_valid", return_value=True), \
              patch("app.session_manager.extend_session"), \
              patch("app.templates.TemplateResponse") as mock_template:
             
-            # Set up the mock to return a simple response
+            # Setting up the mock to return a simple response
             mock_template.return_value.status_code = 200
             mock_template.return_value.headers = {"content-type": "text/html; charset=utf-8"}
             mock_template.return_value.body = b"<html><body>Results</body></html>"
@@ -261,24 +259,24 @@ class TestResultsRoute:
             response = client.get("/results", params={"results": "{}"})
             assert response.status_code == 200
         
-        # Test with invalid session
+        # Testing with invalid session
         with patch("app.session_manager.is_session_valid", return_value=False), \
              patch("app.templates.TemplateResponse") as mock_template:
             
-            # Set up the mock to return a simple response
+            # Setting up the mock to return a simple response
             mock_template.return_value.status_code = 200
             mock_template.return_value.headers = {"content-type": "text/html; charset=utf-8"}
             mock_template.return_value.body = b"<html><body>Session expired</body></html>"
             
             response = client.get("/results", params={"results": "{}"})
-            assert response.status_code == 200  # The app returns 200 with an error message
+            assert response.status_code == 200
 
 class TestVisualsRoute:
     """Test the visuals route"""
     
     def test_serve_valid_file(self):
         """Test serving a valid visual file"""
-        # Create a test file
+        # Creating a test file
         os.makedirs("static/visuals", exist_ok=True)
         test_file_path = "static/visuals/test.png"
         
@@ -294,7 +292,7 @@ class TestVisualsRoute:
                 response = client.get("/visuals/test.png")
                 assert response.status_code == 200
         finally:
-            # Clean up
+            # Cleaning up
             if os.path.exists(test_file_path):
                 os.remove(test_file_path)
     
@@ -310,10 +308,10 @@ class TestVisualsRoute:
     
     def test_session_handling(self):
         """Test session handling for visuals route"""
-        # Test with invalid session
+        # Testing with invalid session
         with patch("app.session_manager.is_session_valid", return_value=False):
             response = client.get("/visuals/test.png")
-            assert response.status_code == 404  # The app returns 404 for simplicity
+            assert response.status_code == 404
 
 @pytest.fixture(autouse=True)
 def setup_and_teardown():
@@ -324,7 +322,7 @@ def setup_and_teardown():
     os.makedirs("static/css", exist_ok=True)
     os.makedirs("static/js", exist_ok=True)
     
-    # Create test user directories
+    # User directories
     os.makedirs("uploads/test_user", exist_ok=True)
     os.makedirs("static/visuals/test_user", exist_ok=True)
     
