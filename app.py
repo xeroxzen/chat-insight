@@ -10,6 +10,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from contextlib import asynccontextmanager
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 # Place the current directory to Python path to avoid dir related errors
 sys.path.append(str(Path(__file__).parent))
@@ -32,6 +33,13 @@ logger = logging.getLogger(__name__)
 
 # Generate a secure secret key for session management
 SECRET_KEY = secrets.token_urlsafe(32)
+
+# Initialize Prometheus metrics
+REQUESTS_TOTAL = Counter('app_requests_total', 'Total number of requests by endpoint', ['endpoint'])
+FILE_UPLOAD_COUNT = Counter('app_file_uploads_total', 'Total number of file uploads')
+FILE_SIZE_BYTES = Histogram('app_file_size_bytes', 'Distribution of uploaded file sizes in bytes', buckets=[1000, 10000, 100000, 1000000, 10000000])
+ANALYSIS_DURATION = Histogram('app_analysis_duration_seconds', 'Time spent analyzing chat logs', buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0])
+USER_SESSIONS = Counter('app_user_sessions_total', 'Total number of user sessions created')
 
 # Security headers middleware
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -163,6 +171,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    REQUESTS_TOTAL.labels(endpoint='/').inc()
     try:
         # Get or create user session
         session = session_manager.get_user_session(request)
@@ -182,6 +191,7 @@ async def index(request: Request):
 
 @app.get("/results")
 async def read_root(request: Request):
+    REQUESTS_TOTAL.labels(endpoint='/results').inc()
     # Check session validity
     if not session_manager.is_session_valid(request):
         return templates.TemplateResponse(
@@ -244,6 +254,9 @@ async def privacy_policy(request: Request):
 
 @app.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
+    REQUESTS_TOTAL.labels(endpoint='/upload').inc()
+    FILE_UPLOAD_COUNT.inc()
+    
     try:
         # Check session validity
         if not session_manager.is_session_valid(request):
@@ -319,11 +332,13 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         })
         
     except Exception as e:
-        logger.error(f"Error in upload route: {str(e)}")
-        return templates.TemplateResponse(
-            request, "index.html",
-            {"error": f"An unexpected error occurred: {str(e)}"}
-        )
+        logger.error(f"Error processing upload: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/metrics")
+async def metrics():
+    """Endpoint for Prometheus metrics"""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 if __name__ == "__main__":
     import uvicorn
