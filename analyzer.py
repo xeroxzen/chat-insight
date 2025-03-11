@@ -53,7 +53,7 @@ TEXT_ANALYSIS_EXCLUDED_TERMS = [
     'voice call', 'video call', 'missed voice call', 'missed video call',
     'media omitted', '<media omitted>', 'image', 'video', 'audio', 'sticker',
     'call', 'omitted', 'missed', 'answered', 'no answer', 'silenced',
-    'tap to call back', 'click to call back'
+    'tap to call back', 'click to call back', 'edited'
 ]
 
 # Media message patterns for analysis
@@ -216,10 +216,21 @@ def preprocess_message(message: str) -> str:
     Preprocess a message by removing non-word characters (except emojis) and converting to lowercase.
     Preserves emojis for better analysis and excludes media-related terms.
     """
-    # Check if message contains any of the excluded terms for text analysis
-    for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
-        if term.lower() in message.lower():
-            return ""  # Return empty string for messages with media terms
+    # Check if message exactly matches any of the media patterns
+    # This is more precise than just checking if a term is contained within the message
+    for media_type, pattern in MEDIA_PATTERNS.items():
+        if re.search(f"^{pattern}$", message, re.IGNORECASE):
+            return ""  # Return empty string for exact media messages
+    
+    # Check for exact matches with common media message formats
+    exact_media_messages = [
+        "image omitted", "video omitted", "audio omitted", "sticker omitted",
+        "voice call", "video call", "missed voice call", "missed video call",
+        "<media omitted>", "Voice call", "Video call"
+    ]
+    
+    if any(message.lower().strip() == term.lower() for term in exact_media_messages):
+        return ""  # Return empty string for exact media messages
     
     # Extracting emojis from the message
     emojis = re.findall(EMOJI_PATTERN, message)
@@ -487,15 +498,32 @@ def perform_analysis(df: pd.DataFrame) -> dict:
             for word in term.lower().split():
                 stop_words.add(word)
 
-        # Filter out messages containing media-related terms
+        # Filter out messages that are media messages
         filtered_messages = []
         for message in df['Message']:
-            should_include = True
-            for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
-                if term.lower() in str(message).lower():
-                    should_include = False
-                    break
-            if should_include:
+            # Skip messages that are exactly media messages
+            is_media_message = False
+            
+            # Check if message exactly matches any media pattern
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                if re.search(pattern, str(message), re.IGNORECASE):
+                    # Check if the message is just the media pattern without much else
+                    if len(str(message).split()) <= 4:  # Media messages are usually short
+                        is_media_message = True
+                        break
+            
+            # Check for exact matches with common media message formats
+            exact_media_messages = [
+                "image omitted", "video omitted", "audio omitted", "sticker omitted",
+                "voice call", "video call", "missed voice call", "missed video call",
+                "<media omitted>", "Voice call", "Video call"
+            ]
+            
+            if any(str(message).lower().strip() == term.lower() for term in exact_media_messages):
+                is_media_message = True
+            
+            # Only include non-media messages
+            if not is_media_message:
                 filtered_messages.append(str(message))
 
         all_messages = ' '.join([preprocess_message(msg) for msg in filtered_messages])
@@ -1130,15 +1158,32 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
             df['MessageLength'] = df['Message'].str.len()
         
         # Creating and saving wordcloud
-        # Filter out messages containing media-related terms
+        # Filter out messages that are media messages
         filtered_messages = []
         for message in df['Message']:
-            should_include = True
-            for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
-                if term.lower() in str(message).lower():
-                    should_include = False
-                    break
-            if should_include:
+            # Skip messages that are exactly media messages
+            is_media_message = False
+            
+            # Check if message exactly matches any media pattern
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                if re.search(pattern, str(message), re.IGNORECASE):
+                    # Check if the message is just the media pattern without much else
+                    if len(str(message).split()) <= 4:  # Media messages are usually short
+                        is_media_message = True
+                        break
+            
+            # Check for exact matches with common media message formats
+            exact_media_messages = [
+                "image omitted", "video omitted", "audio omitted", "sticker omitted",
+                "voice call", "video call", "missed voice call", "missed video call",
+                "<media omitted>", "Voice call", "Video call"
+            ]
+            
+            if any(str(message).lower().strip() == term.lower() for term in exact_media_messages):
+                is_media_message = True
+            
+            # Only include non-media messages
+            if not is_media_message:
                 filtered_messages.append(str(message))
 
         # Create custom stopwords set by adding our excluded terms to STOPWORDS
