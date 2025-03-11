@@ -39,7 +39,7 @@ class VisualizationConfig:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
 # Add constants
-EMOJI_PATTERN = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F900-\U0001F9FF]'
+EMOJI_PATTERN = r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF\U0000FE00-\U0000FE0F\U00002B50\U00002705\U0001F1E6-\U0001F1FF\U00002639-\U0001F6FF\U0001F900-\U0001F9FF\U00002190-\U00002BFF]+'
 URL_PATTERN = r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
 DAY_START_HOUR = 6
 EXCLUDED_MESSAGES = [
@@ -97,9 +97,32 @@ def read_chat_log(csv_file_path: str) -> pd.DataFrame:
         logger.error(f"Error reading chat log: {str(e)}")
         raise
 
+def normalize_sender_name(sender: str) -> str:
+    """
+    Normalize sender names by preserving emojis but ensuring consistent representation.
+    This helps with proper grouping of messages by sender even when names contain emojis.
+    
+    Args:
+        sender: The sender name that may contain emojis
+        
+    Returns:
+        Normalized sender name with emojis preserved
+    """
+    # Extract emojis from the sender name
+    emojis = re.findall(EMOJI_PATTERN, sender)
+    
+    # Get the text part of the name (without emojis)
+    text_part = re.sub(EMOJI_PATTERN, '', sender).strip()
+    
+    # If there are emojis, append them to the text part in a consistent order
+    if emojis:
+        return f"{text_part} {''.join(emojis)}"
+    
+    return text_part
+
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Preprocess the chat log data with improved handling of date/time.
+    Preprocess the chat log data with improved handling of date/time and emojis.
     """
     try:
         # Create a copy to avoid modifying the original
@@ -111,6 +134,9 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         
         # Convert Time to datetime.time objects
         df['Time'] = pd.to_datetime(df['Time'].str.strip(), format='%H:%M:%S').dt.time
+        
+        # Normalize sender names to handle emojis consistently
+        df['Sender'] = df['Sender'].apply(normalize_sender_name)
         
         # Filter out system messages and media
         pattern = '|'.join(EXCLUDED_MESSAGES)
@@ -145,11 +171,23 @@ def analyze_participants(df: pd.DataFrame) -> tuple:
     return participant1_message_count, participant2_message_count
 
 def preprocess_message(message: str) -> str:
-    """Preprocess a message by removing non-word characters and converting to lowercase."""
-    return re.sub(r'[^\w\s]', '', message).lower()
+    """
+    Preprocess a message by removing non-word characters (except emojis) and converting to lowercase.
+    Preserves emojis for better analysis.
+    """
+    # Extract emojis from the message
+    emojis = re.findall(EMOJI_PATTERN, message)
+    
+    # Remove non-word characters and convert to lowercase
+    cleaned_text = re.sub(r'[^\w\s]', '', message).lower()
+    
+    # Add the emojis back to the cleaned text
+    return cleaned_text + ' ' + ' '.join(emojis)
 
 def analyze_sentiment(df: pd.DataFrame) -> pd.DataFrame:
-    """Analyze sentiment of messages in the chat log."""
+    """
+    Analyze sentiment of messages in the chat log with improved emoji handling.
+    """
     try:
         # Create a copy of the dataframe to avoid modifying the original
         df = df.copy()
@@ -158,14 +196,36 @@ def analyze_sentiment(df: pd.DataFrame) -> pd.DataFrame:
         df['Sentiment'] = 0.0
         df['Sentiment_Label'] = 'Neutral'
         
+        # Define common positive and negative emojis for sentiment adjustment
+        positive_emojis = ['😊', '😁', '😄', '😃', '😀', '🙂', '😍', '🥰', '❤️', '👍', '🙏', '🤗']
+        negative_emojis = ['😢', '😭', '😞', '😔', '😟', '😕', '😠', '😡', '👎', '💔']
+        
         # Apply sentiment analysis row by row with error handling
         for idx, row in df.iterrows():
             try:
-                sentiment = TextBlob(str(row['Message'])).sentiment.polarity
-                df.at[idx, 'Sentiment'] = sentiment
+                message = str(row['Message'])
+                
+                # Extract emojis from the message
+                message_emojis = re.findall(EMOJI_PATTERN, message)
+                
+                # Calculate base sentiment using TextBlob
+                sentiment = TextBlob(message).sentiment.polarity
+                
+                # Adjust sentiment based on emojis
+                emoji_sentiment = 0
+                for emoji in message_emojis:
+                    if any(pos_emoji in emoji for pos_emoji in positive_emojis):
+                        emoji_sentiment += 0.2
+                    elif any(neg_emoji in emoji for neg_emoji in negative_emojis):
+                        emoji_sentiment -= 0.2
+                
+                # Combine text and emoji sentiment (with a cap)
+                adjusted_sentiment = max(min(sentiment + emoji_sentiment, 1.0), -1.0)
+                
+                df.at[idx, 'Sentiment'] = adjusted_sentiment
                 df.at[idx, 'Sentiment_Label'] = (
-                    'Positive' if sentiment > 0 
-                    else 'Negative' if sentiment < 0 
+                    'Positive' if adjusted_sentiment > 0 
+                    else 'Negative' if adjusted_sentiment < 0 
                     else 'Neutral'
                 )
             except Exception as e:
@@ -182,6 +242,56 @@ def analyze_sentiment(df: pd.DataFrame) -> pd.DataFrame:
         if 'Sentiment_Label' not in df.columns:
             df['Sentiment_Label'] = 'Neutral'
         return df
+
+def analyze_emoji_usage(df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Analyze emoji usage patterns by sender.
+    
+    Args:
+        df: DataFrame containing chat data
+        
+    Returns:
+        Dictionary with emoji usage statistics
+    """
+    # Create a copy to avoid modifying the original
+    df = df.copy()
+    
+    # Extract emojis from each message
+    df['Emojis'] = df['Message'].apply(lambda x: re.findall(EMOJI_PATTERN, str(x)))
+    
+    # Count emojis per message
+    df['EmojiCount'] = df['Emojis'].apply(len)
+    
+    # Calculate emoji usage statistics by sender
+    emoji_stats = {}
+    
+    # Overall emoji counts
+    all_emojis = [emoji for emojis in df['Emojis'] for emoji in emojis]
+    top_emojis = Counter(all_emojis).most_common(10)
+    
+    # Emoji usage by sender
+    for sender in df['Sender'].unique():
+        sender_df = df[df['Sender'] == sender]
+        
+        # Count total emojis used by this sender
+        sender_emojis = [emoji for emojis in sender_df['Emojis'] for emoji in emojis]
+        
+        # Calculate emoji statistics
+        emoji_stats[sender] = {
+            'total_emoji_count': len(sender_emojis),
+            'avg_emojis_per_message': len(sender_emojis) / len(sender_df) if len(sender_df) > 0 else 0,
+            'messages_with_emojis': len(sender_df[sender_df['EmojiCount'] > 0]),
+            'emoji_percentage': len(sender_df[sender_df['EmojiCount'] > 0]) / len(sender_df) * 100 if len(sender_df) > 0 else 0,
+            'favorite_emojis': Counter(sender_emojis).most_common(5) if sender_emojis else []
+        }
+    
+    return {
+        'top_emojis': top_emojis,
+        'emoji_stats_by_sender': emoji_stats,
+        'total_emoji_count': len(all_emojis),
+        'messages_with_emojis': len(df[df['EmojiCount'] > 0]),
+        'emoji_percentage': len(df[df['EmojiCount'] > 0]) / len(df) * 100 if len(df) > 0 else 0
+    }
 
 def perform_analysis(df: pd.DataFrame) -> dict:
     """Perform various analyses on the chat log."""
@@ -203,8 +313,12 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         avg_messages_per_day = date_counts.mean()
         
         # Basic text analysis
-        emojis = df['Message'].str.extractall(r'([\U0001f600-\U0001f650])')[0].value_counts().head(10)
-        links = df['Message'].str.extractall(r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)')[0].value_counts().head(10)
+        # Extract emojis using the same method as in analyze_emoji_usage for consistency
+        df['Emojis'] = df['Message'].apply(lambda x: re.findall(EMOJI_PATTERN, str(x)))
+        all_emojis = [emoji for emojis in df['Emojis'] for emoji in emojis]
+        emojis = dict(Counter(all_emojis).most_common(15))
+        
+        links = df['Message'].str.extractall(URL_PATTERN)[0].value_counts().head(10).to_dict()
         
         # Word analysis
         stop_words = set(stopwords.words('english'))
@@ -227,6 +341,9 @@ def perform_analysis(df: pd.DataFrame) -> dict:
             sentiment_counts = {'Neutral': len(df)}  # Default all to neutral
         
         logger.info("Sentiment analysis completed, starting additional analyses")
+        
+        # Emoji usage analysis
+        emoji_analysis = analyze_emoji_usage(df)
         
         # Response time analysis
         df_sorted = df.sort_values('DateTime')
@@ -264,14 +381,15 @@ def perform_analysis(df: pd.DataFrame) -> dict:
             "first_message_date": df['Date'].min().strftime('%Y-%m-%d'),
             "last_message_date": df['Date'].max().strftime('%Y-%m-%d'),
             "avg_messages_per_day": avg_messages_per_day,
-            "emojis": emojis.to_dict(),
-            "links": links.to_dict(),
+            "emojis": emojis,
+            "links": links,
             "sentiment_counts": sentiment_counts,
             "average_response_times": avg_response_time.to_dict(),
             "peak_activity_hours": peak_hours,
             "longest_message_streak": longest_streak,
             "questions_asked": questions_by_sender.to_dict(),
-            "average_message_length": avg_message_length.to_dict()
+            "average_message_length": avg_message_length.to_dict(),
+            "emoji_usage": emoji_analysis
         }
         
         logger.info("Analysis completed successfully")
@@ -366,17 +484,18 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.close()
         
         # Top emojis
-        emoji_counts = df['Message'].str.findall(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F900-\U0001F9FF]').explode().value_counts()
-        top_10_emojis = emoji_counts.head(10)
-        plt.figure(figsize=(10, 6))
-        top_10_emojis.plot(kind='bar', color=['red', 'green', 'blue', 'yellow', 'purple', 'orange', 'pink', 'brown', 'grey', 'black'])
-        plt.title('Top 10 Emojis Used')
-        plt.xlabel('Emojis')
-        plt.ylabel('Count')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        visualizations['top_emojis'] = save_visualization(plt.gcf(), 'top_emojis.png', config)
-        plt.close()
+        emoji_counts = df['Message'].str.findall(EMOJI_PATTERN).explode()
+        if not emoji_counts.empty:
+            top_10_emojis = emoji_counts.value_counts().head(10)
+            plt.figure(figsize=(10, 6))
+            top_10_emojis.plot(kind='bar', color=['red', 'green', 'blue', 'yellow', 'purple', 'orange', 'pink', 'brown', 'grey', 'black'])
+            plt.title('Top 10 Emojis Used')
+            plt.xlabel('Emojis')
+            plt.ylabel('Count')
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            visualizations['top_emojis'] = save_visualization(plt.gcf(), 'top_emojis.png', config)
+            plt.close()
         
         # Messages per sender
         messages_count_per_sender = df['Sender'].value_counts()
@@ -438,6 +557,34 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         visualizations['daily_pattern'] = save_visualization(plt.gcf(), 'daily_pattern.png', config)
         plt.close()
         
+        # Emoji usage by sender
+        if 'Emojis' not in df.columns:
+            df['Emojis'] = df['Message'].apply(lambda x: re.findall(EMOJI_PATTERN, str(x)))
+            
+        if 'EmojiCount' not in df.columns:
+            df['EmojiCount'] = df['Emojis'].apply(len)
+        
+        emoji_usage_by_sender = df.groupby('Sender')['EmojiCount'].agg(['sum', 'mean'])
+        emoji_usage_by_sender.columns = ['Total Emojis', 'Average Emojis per Message']
+        
+        plt.figure(figsize=(12, 6))
+        emoji_usage_by_sender['Total Emojis'].plot(kind='bar', color='skyblue', position=0, width=0.4, alpha=0.7)
+        
+        # Create a second axis for the average
+        ax2 = plt.twinx()
+        emoji_usage_by_sender['Average Emojis per Message'].plot(kind='bar', color='salmon', position=1, width=0.4, alpha=0.7, ax=ax2)
+        
+        plt.title('Emoji Usage by Sender')
+        plt.xlabel('Sender')
+        plt.ylabel('Total Emoji Count')
+        ax2.set_ylabel('Average Emojis per Message')
+        plt.legend(['Total Emojis'], loc='upper left')
+        ax2.legend(['Average Emojis per Message'], loc='upper right')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        visualizations['emoji_usage_by_sender'] = save_visualization(plt.gcf(), 'emoji_usage_by_sender.png', config)
+        plt.close()
+        
         # Group-specific visualizations
         if chat_type == 'friends':
             # Group participation
@@ -496,6 +643,8 @@ class ChatAnalysis:
     most_common_words: List[Tuple[str, int]] = field(default_factory=list)
     stop_words = set(stopwords.words('english')).union({'im', 'like', 'ill', 'the', 'will', 'edited', 'dont'})
     emojis: Dict[str, int] = field(default_factory=dict)
+    emoji_usage: Dict[str, Any] = field(default_factory=dict)  # Detailed emoji analysis
+    emoji_stats_by_sender: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # Emoji stats per sender
     links: Dict[str, int] = field(default_factory=dict)
     first_message_date: str = None  # Changed to str
     last_message_date: str = None  # Changed to str
@@ -525,6 +674,8 @@ class ChatAnalysis:
             "most_active_time": self.most_active_time,
             "most_common_words": self.most_common_words,
             "emojis": self.emojis,
+            "emoji_usage": self.emoji_usage,
+            "emoji_stats_by_sender": self.emoji_stats_by_sender,
             "links": self.links,
             "first_message_date": self.first_message_date,  # Already a string
             "last_message_date": self.last_message_date,  # Already a string
@@ -711,6 +862,12 @@ def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> d
         analysis.sentiment_analysis = common_results.get('sentiment_counts', {'Neutral': len(df)})
         analysis.message_patterns = common_results
         
+        # Add emoji usage analysis
+        if 'emoji_usage' in common_results:
+            analysis.emoji_usage = common_results['emoji_usage']
+            if 'emoji_stats_by_sender' in common_results['emoji_usage']:
+                analysis.emoji_stats_by_sender = common_results['emoji_usage']['emoji_stats_by_sender']
+        
         # Group-specific analysis
         if is_group:
             group_results = analyze_group_dynamics(df)
@@ -728,6 +885,16 @@ def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> d
         # Create message activity heatmap
         heatmap_path = create_message_activity_heatmap(df, config)
         visualization_paths['heatmap'] = heatmap_path
+        
+        # Extract and count emojis from all messages
+        if not analysis.emojis:  # Only set if not already set from common_results
+            all_emojis = []
+            for message in df['Message']:
+                emojis_found = re.findall(EMOJI_PATTERN, str(message))
+                all_emojis.extend(emojis_found)
+            
+            emoji_counter = Counter(all_emojis)
+            analysis.emojis = {emoji: count for emoji, count in emoji_counter.most_common(15)}
         
         # Return results as dictionary
         return analysis.to_dict()
