@@ -262,6 +262,9 @@ def analyze_emoji_usage(df: pd.DataFrame) -> Dict[str, Any]:
     # Count emojis per message
     df['EmojiCount'] = df['Emojis'].apply(len)
     
+    # Get top 5 participants by message count
+    top_participants = df['Sender'].value_counts().nlargest(5).index.tolist()
+    
     # Calculate emoji usage statistics by sender
     emoji_stats = {}
     
@@ -269,8 +272,8 @@ def analyze_emoji_usage(df: pd.DataFrame) -> Dict[str, Any]:
     all_emojis = [emoji for emojis in df['Emojis'] for emoji in emojis]
     top_emojis = Counter(all_emojis).most_common(10)
     
-    # Emoji usage by sender
-    for sender in df['Sender'].unique():
+    # Emoji usage by sender (limited to top 5 participants)
+    for sender in top_participants:
         sender_df = df[df['Sender'] == sender]
         
         # Count total emojis used by this sender
@@ -406,6 +409,9 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         visualizations = {}
         logger.info(f"Generating visualizations in directory: {config.output_dir}")
         
+        # Get top 20 participants by message count for group chat visualizations
+        top_20_senders = df['Sender'].value_counts().nlargest(20).index.tolist()
+        
         # Add MessageLength column if it doesn't exist
         if 'MessageLength' not in df.columns:
             df['MessageLength'] = df['Message'].str.len()
@@ -427,6 +433,10 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         first_messages = df_filtered.groupby('Date').first()
         first_sender_counts = first_messages['Sender'].value_counts()
         
+        # Limit to top 20 participants for group chats
+        if chat_type == 'friends':
+            first_sender_counts = first_sender_counts[first_sender_counts.index.isin(top_20_senders)]
+        
         plt.figure(figsize=(10, 6))
         first_sender_counts.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
         plt.title('First Message of the Day by Sender (After 6 AM)')
@@ -441,7 +451,12 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         
         # Message Length Distribution
         plt.figure(figsize=config.figure_sizes['default'])
-        sns.boxplot(x='Sender', y='MessageLength', data=df)
+        if chat_type == 'friends':
+            # Limit to top 20 participants for group chats
+            df_top20 = df[df['Sender'].isin(top_20_senders)]
+            sns.boxplot(x='Sender', y='MessageLength', data=df_top20)
+        else:
+            sns.boxplot(x='Sender', y='MessageLength', data=df)
         plt.title('Message Length Distribution by Sender')
         plt.ylabel('Message Length (characters)')
         plt.xticks(rotation=45)
@@ -451,6 +466,10 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         
         # Average messages per day by sender
         avg_messages_per_day_by_sender = df.groupby('Sender')['Date'].value_counts().groupby('Sender').mean()
+        
+        # Limit to top 20 participants for group chats
+        if chat_type == 'friends':
+            avg_messages_per_day_by_sender = avg_messages_per_day_by_sender[avg_messages_per_day_by_sender.index.isin(top_20_senders)]
         
         plt.figure(figsize=(10, 6))
         avg_messages_per_day_by_sender.plot(kind='bar', color=['red', 'green', 'orange', 'skyblue', 'purple'])
@@ -475,6 +494,10 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         
         # Links shared by sender
         links_shared = df[df['Message'].str.contains('http[s]?://')]['Sender'].value_counts()
+        if chat_type == 'friends':
+            # Limit to top 20 participants for group chats
+            links_shared = links_shared[links_shared.index.isin(top_20_senders)]
+        
         plt.figure(figsize=(8, 8))
         plt.pie(links_shared, labels=links_shared.index, autopct='%1.1f%%', startangle=90)
         plt.title('Links Shared by Each Sender')
@@ -499,6 +522,10 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         
         # Messages per sender
         messages_count_per_sender = df['Sender'].value_counts()
+        if chat_type == 'friends':
+            # Limit to top 20 participants for group chats
+            messages_count_per_sender = messages_count_per_sender.head(20)
+        
         plt.figure(figsize=(10, 6))
         messages_count_per_sender.plot(kind='bar', color=['lightblue', 'yellow'])
         plt.title('Total Messages Count per Sender')
@@ -547,7 +574,13 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         plt.close()
         
         # Daily pattern
-        daily_pattern = df.groupby([df['DateTime'].dt.hour, 'Sender'])['Message'].count().unstack()
+        if chat_type == 'friends':
+            # Limit to top 20 participants for group chats
+            df_pattern = df[df['Sender'].isin(top_20_senders)]
+            daily_pattern = df_pattern.groupby([df_pattern['DateTime'].dt.hour, 'Sender'])['Message'].count().unstack()
+        else:
+            daily_pattern = df.groupby([df['DateTime'].dt.hour, 'Sender'])['Message'].count().unstack()
+            
         plt.figure(figsize=config.figure_sizes['default'])
         daily_pattern.plot(kind='line', marker='o')
         plt.title('Daily Conversation Pattern')
@@ -564,7 +597,11 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         if 'EmojiCount' not in df.columns:
             df['EmojiCount'] = df['Emojis'].apply(len)
         
-        emoji_usage_by_sender = df.groupby('Sender')['EmojiCount'].agg(['sum', 'mean'])
+        # Get top 5 participants by message count for emoji visualization
+        top_5_senders = df['Sender'].value_counts().nlargest(5).index.tolist()
+        df_top5 = df[df['Sender'].isin(top_5_senders)]
+        
+        emoji_usage_by_sender = df_top5.groupby('Sender')['EmojiCount'].agg(['sum', 'mean'])
         emoji_usage_by_sender.columns = ['Total Emojis', 'Average Emojis per Message']
         
         plt.figure(figsize=(12, 6))
