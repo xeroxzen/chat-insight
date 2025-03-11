@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -34,6 +34,120 @@
     <title>Chat Insight - WhatsApp Conversation Analyzer</title>
     <link rel="stylesheet" href="../static/css/style.css" />
     <style>
+      /* Dark mode variables */
+      :root {
+        --primary: #008080;
+        --primary-light: #00a3a3;
+        --primary-dark: #006666;
+        --background: #f0f8ff;
+        --text-primary: #333;
+        --text-secondary: #666;
+        --white: #ffffff;
+        --error: #ff4444;
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      [data-theme="dark"] {
+        --primary: #00a3a3;
+        --primary-light: #00c3c3;
+        --primary-dark: #008080;
+        --background: #121212;
+        --text-primary: #e0e0e0;
+        --text-secondary: #aaaaaa;
+        --white: #1e1e1e;
+        --error: #ff6666;
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(
+          -45deg,
+          var(--background),
+          #e6f3ff,
+          #e0f2f1,
+          #e0f7fa
+        );
+        background-size: 400% 400%;
+        animation: gradientAnimation 15s ease infinite;
+        color: var(--text-primary);
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow-x: hidden;
+        transition: background 0.3s ease, color 0.3s ease;
+      }
+
+      [data-theme="dark"] body {
+        background: linear-gradient(-45deg, #121212, #1a1a1a, #121212, #1a1a1a);
+      }
+
+      .container {
+        text-align: center;
+        max-width: 600px;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: var(--shadow-lg);
+        animation: fadeIn 1s ease-out;
+        margin-bottom: 60px;
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        transition: background 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      [data-theme="dark"] .container {
+        background: rgba(30, 30, 30, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      h1 {
+        color: var(--primary);
+        transition: color 0.3s ease;
+      }
+
+      .service-description h2 {
+        color: var(--primary);
+        transition: color 0.3s ease;
+      }
+
+      .feature {
+        background-color: #f9f9f9;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      [data-theme="dark"] .feature {
+        background-color: #1e1e1e;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      }
+
+      .feature h3 {
+        color: var(--primary);
+        transition: color 0.3s ease;
+      }
+
+      .feature p {
+        color: var(--text-secondary);
+        transition: color 0.3s ease;
+      }
+
+      footer {
+        background-color: var(--primary) !important;
+        transition: background-color 0.3s ease;
+      }
+
       .spinner-container {
         display: none;
         position: fixed;
@@ -45,23 +159,35 @@
         z-index: 1000;
         justify-content: center;
         align-items: center;
+        transition: background 0.3s ease;
+      }
+
+      [data-theme="dark"] .spinner-container {
+        background: rgba(18, 18, 18, 0.9);
       }
 
       .spinner {
         width: 50px;
         height: 50px;
         border: 5px solid #f3f3f3;
-        border-top: 5px solid #008080;
+        border-top: 5px solid var(--primary);
         border-radius: 50%;
         animation: spin 1s linear infinite;
+        transition: border 0.3s ease;
+      }
+
+      [data-theme="dark"] .spinner {
+        border: 5px solid #333;
+        border-top: 5px solid var(--primary);
       }
 
       .spinner-text {
         position: absolute;
         margin-top: 100px;
-        color: #008080;
+        color: var(--primary);
         font-size: 1.2em;
         font-weight: bold;
+        transition: color 0.3s ease;
       }
 
       @keyframes spin {
@@ -79,7 +205,7 @@
       }
 
       .service-description h2 {
-        color: #008080;
+        color: var(--primary);
         margin-bottom: 15px;
         font-size: 1.8em;
       }
@@ -114,13 +240,13 @@
       }
 
       .feature h3 {
-        color: #008080;
+        color: var(--primary);
         margin-bottom: 10px;
         font-size: 1.3em;
       }
 
       .feature p {
-        color: #555;
+        color: var(--text-secondary);
         font-size: 0.95em;
         line-height: 1.4;
       }
@@ -134,9 +260,91 @@
           width: 100%;
         }
       }
+
+      /* Theme toggle styles */
+      .theme-switch-wrapper {
+        display: flex;
+        align-items: center;
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 100;
+      }
+
+      .theme-switch {
+        display: inline-block;
+        height: 24px;
+        position: relative;
+        width: 50px;
+      }
+
+      .theme-switch input {
+        display: none;
+      }
+
+      .slider {
+        background-color: #ccc;
+        bottom: 0;
+        cursor: pointer;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+
+      .slider:before {
+        background-color: white;
+        bottom: 4px;
+        content: "";
+        height: 16px;
+        left: 4px;
+        position: absolute;
+        transition: 0.4s;
+        width: 16px;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: var(--primary);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(26px);
+      }
+
+      .slider-icons {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 6px;
+        align-items: center;
+        height: 100%;
+        color: white;
+        font-size: 12px;
+      }
+
+      @media (max-width: 768px) {
+        .theme-switch-wrapper {
+          top: 10px;
+          right: 10px;
+        }
+      }
     </style>
   </head>
   <body>
+    <div class="theme-switch-wrapper">
+      <label class="theme-switch" for="checkbox">
+        <input type="checkbox" id="checkbox" />
+        <div class="slider">
+          <div class="slider-icons">
+            <span>☀️</span>
+            <span>🌙</span>
+          </div>
+        </div>
+      </label>
+    </div>
+
     <div class="container">
       <h1>Chat Insight</h1>
       <div class="service-description">
@@ -202,7 +410,7 @@
         position: fixed;
         bottom: 0;
         width: 100%;
-        background-color: #008080;
+        background-color: var(--primary);
         color: white;
         text-align: center;
         padding: 10px 0;
@@ -220,10 +428,7 @@
           Open Source on GitHub
         </a>
         |
-        <a
-          href="/privacy-policy"
-          style="color: white; text-decoration: none"
-        >
+        <a href="/privacy-policy" style="color: white; text-decoration: none">
           Privacy Policy
         </a>
       </p>
@@ -249,6 +454,32 @@
         .addEventListener("submit", function () {
           document.getElementById("spinnerContainer").style.display = "flex";
         });
+
+      // Dark mode toggle functionality
+      const toggleSwitch = document.querySelector("#checkbox");
+      const html = document.querySelector("html");
+
+      // Check for saved theme preference
+      const currentTheme = localStorage.getItem("theme") || "light";
+      html.setAttribute("data-theme", currentTheme);
+
+      // Update checkbox state based on saved preference
+      if (currentTheme === "dark") {
+        toggleSwitch.checked = true;
+      }
+
+      // Handle theme switch
+      function switchTheme(e) {
+        if (e.target.checked) {
+          html.setAttribute("data-theme", "dark");
+          localStorage.setItem("theme", "dark");
+        } else {
+          html.setAttribute("data-theme", "light");
+          localStorage.setItem("theme", "light");
+        }
+      }
+
+      toggleSwitch.addEventListener("change", switchTheme, false);
     </script>
   </body>
 </html>
