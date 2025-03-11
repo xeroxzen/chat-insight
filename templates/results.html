@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
     <title>Chat Insight</title>
     <style>
       :root {
@@ -286,6 +290,139 @@
         }
         100% {
           transform: rotate(360deg);
+        }
+      }
+
+      /* Share Button Styles */
+      .share-buttons {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 10;
+      }
+
+      .share-button {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px var(--shadow-color);
+      }
+
+      .share-button:hover {
+        transform: scale(1.1);
+        background: #006666;
+      }
+
+      .share-button i {
+        font-size: 1.2rem;
+      }
+
+      /* Floating Action Button */
+      .fab {
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        background: var(--primary-color);
+        color: white;
+        padding: 0 20px;
+        height: 56px;
+        border-radius: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 8px var(--shadow-color);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 1000;
+        border: none;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      .fab:hover {
+        transform: scale(1.05);
+        background: #006666;
+      }
+
+      .fab i {
+        font-size: 1.2rem;
+      }
+
+      /* Share Menu */
+      .share-menu {
+        position: fixed;
+        bottom: 150px;
+        right: 20px;
+        background: white;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 4px 8px var(--shadow-color);
+        display: none;
+        z-index: 1000;
+      }
+
+      .share-menu.active {
+        display: block;
+        animation: slideUp 0.3s ease;
+      }
+
+      .share-menu button {
+        display: block;
+        width: 100%;
+        padding: 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+        border: none;
+        background: var(--secondary-color);
+        color: var(--text-primary);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .share-menu button:hover {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      /* Toast Notification */
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        display: none;
+        z-index: 1001;
+      }
+
+      .toast.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
     </style>
@@ -609,6 +746,32 @@
       </div>
       {% endif %}
     </div>
+
+    <!-- Floating Action Button and Share Menu -->
+    <button
+      class="fab"
+      onclick="toggleShareMenu()"
+      aria-label="Open share menu"
+    >
+      <i class="fas fa-share-alt" aria-hidden="true"></i>
+      <span>Share</span>
+    </button>
+
+    <div class="share-menu" id="shareMenu">
+      <button onclick="shareFullAnalysis()">
+        <i class="fas fa-share-alt"></i> Share Analysis
+      </button>
+      <button onclick="downloadAllVisuals()">
+        <i class="fas fa-download"></i> Download All Visuals
+      </button>
+      <!-- <button onclick="copyLink()">
+        <i class="fas fa-link"></i> Copy Link
+      </button> -->
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
     <footer
       style="
         position: fixed;
@@ -633,10 +796,7 @@
             Open Source on GitHub
           </a>
           |
-          <a
-            href="/privacy-policy"
-            style="color: white; text-decoration: none"
-          >
+          <a href="/privacy-policy" style="color: white; text-decoration: none">
             Privacy Policy
           </a>
         </p>
@@ -718,6 +878,135 @@
       // If all images are already loaded, hide spinner
       if (loadedImages === images.length) {
         hideSpinner();
+      }
+
+      // Sharing functionality
+      function showToast(message, duration = 3000) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.classList.add("active");
+        setTimeout(() => toast.classList.remove("active"), duration);
+      }
+
+      function toggleShareMenu() {
+        const menu = document.getElementById("shareMenu");
+        menu.classList.toggle("active");
+      }
+
+      async function shareImage(button) {
+        const img = button.closest(".chart-container").querySelector("img");
+        const title = button.dataset.title;
+
+        try {
+          if (navigator.share) {
+            const response = await fetch(img.src);
+            const blob = await response.blob();
+            const file = new File([blob], `${title}.png`, {
+              type: "image/png",
+            });
+
+            await navigator.share({
+              title: `Chat Insight - ${title}`,
+              text: "Check out this chat analysis visualization!",
+              files: [file],
+            });
+          } else {
+            // Fallback to copying link
+            await copyImageLink(img.src);
+          }
+        } catch (error) {
+          console.error("Error sharing:", error);
+          showToast("Unable to share. Try downloading instead.");
+        }
+      }
+
+      async function downloadImage(button) {
+        const img = button.closest(".chart-container").querySelector("img");
+        const title = button.dataset.title;
+
+        try {
+          const response = await fetch(img.src);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${title}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error("Error downloading:", error);
+          showToast("Unable to download. Please try again.");
+        }
+      }
+
+      async function shareFullAnalysis() {
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: "Chat Insight Analysis",
+              text: "Check out my chat analysis!",
+              url: window.location.href,
+            });
+          } else {
+            await copyLink();
+          }
+        } catch (error) {
+          console.error("Error sharing:", error);
+          showToast("Unable to share. Try copying the link instead.");
+        }
+        toggleShareMenu();
+      }
+
+      async function downloadAllVisuals() {
+        const images = document.querySelectorAll(".chart-container img");
+        let count = 0;
+
+        for (const img of images) {
+          try {
+            const title = img
+              .closest(".chart-container")
+              .previousElementSibling.textContent.trim();
+            const response = await fetch(img.src);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${title}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            count++;
+          } catch (error) {
+            console.error("Error downloading:", error);
+          }
+        }
+
+        showToast(`Downloaded ${count} visualizations`);
+        toggleShareMenu();
+      }
+
+      async function copyLink() {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          showToast("Link copied to clipboard!");
+        } catch (error) {
+          console.error("Error copying link:", error);
+          showToast("Unable to copy link. Please try again.");
+        }
+        toggleShareMenu();
+      }
+
+      async function copyImageLink(imageUrl) {
+        try {
+          await navigator.clipboard.writeText(imageUrl);
+          showToast("Image link copied to clipboard!");
+        } catch (error) {
+          console.error("Error copying image link:", error);
+          showToast("Unable to copy image link. Please try again.");
+        }
       }
     </script>
   </body>
