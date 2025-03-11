@@ -289,11 +289,63 @@
         transition: transform 0.2s ease;
         animation: fadeIn 0.5s ease-out;
         border: 1px solid var(--glass-border);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
       }
 
       .emoji-tag:hover {
         transform: scale(1.05);
         box-shadow: 0 5px 15px var(--shadow-color);
+      }
+
+      .emoji-count {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        background: rgba(0, 0, 0, 0.1);
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+      }
+
+      /* Emoji Stats Styles */
+      .emoji-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .sender-emoji-stats {
+        background: var(--card-gradient);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--glass-border);
+        transition: transform 0.2s ease;
+      }
+
+      .sender-emoji-stats:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px var(--shadow-color);
+      }
+
+      .sender-emoji-stats h3 {
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 0.5rem;
+      }
+
+      .favorite-emojis {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .favorite-emojis .emoji-tag {
+        font-size: 1.5rem;
+        padding: 0.3rem 0.8rem;
       }
 
       /* Chart Container Styles */
@@ -666,6 +718,127 @@
         height: 20px;
         fill: currentColor;
       }
+
+      /* Section Header Styles */
+      .section-header {
+        text-align: center;
+        margin: 3rem 0 2rem;
+        animation: fadeIn 0.8s ease-out;
+      }
+
+      .section-header h2 {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px var(--shadow-color);
+      }
+
+      .section-header p {
+        max-width: 800px;
+        margin: 0 auto;
+        opacity: 0.8;
+      }
+
+      /* Overall Emoji Stats Styles */
+      .overall-emoji-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .overall-emoji-stats p {
+        background: var(--card-gradient);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        padding: 0.8rem 1rem;
+        border-radius: 10px;
+        border: 1px solid var(--glass-border);
+        transition: transform 0.2s ease;
+      }
+
+      .overall-emoji-stats p:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px var(--shadow-color);
+      }
+
+      .stat-label {
+        font-weight: bold;
+        color: var(--primary-color);
+      }
+
+      /* Emoji Highlight Section */
+      .emoji-highlight {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin: 2rem auto;
+        max-width: 1200px;
+      }
+
+      .emoji-highlight-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        animation: floatAnimation 3s ease-in-out infinite;
+      }
+
+      .emoji-highlight-item:nth-child(2) {
+        animation-delay: 0.5s;
+      }
+
+      .emoji-highlight-item:nth-child(3) {
+        animation-delay: 1s;
+      }
+
+      .emoji-highlight-item:nth-child(4) {
+        animation-delay: 1.5s;
+      }
+
+      .emoji-highlight-item:nth-child(5) {
+        animation-delay: 2s;
+      }
+
+      .emoji-bubble {
+        background: var(--card-gradient);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        padding: 1rem;
+        border-radius: 50%;
+        font-size: 2.5rem;
+        color: var(--text-primary);
+        transition: transform 0.2s ease;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 8px 32px var(--shadow-color);
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .emoji-count-large {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 1rem;
+        font-weight: bold;
+        box-shadow: 0 4px 8px var(--shadow-color);
+      }
+
+      @keyframes floatAnimation {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
     </style>
   </head>
   <body>
@@ -699,6 +872,12 @@
           communication strategies.
         </p>
       </div>
+    </div>
+
+    <!-- Main Analysis Section -->
+    <div class="section-header">
+      <h2>Chat Overview</h2>
+      <p>Key metrics and insights from your conversation</p>
     </div>
 
     <div class="grid-container">
@@ -769,19 +948,6 @@
         </div>
       </div>
 
-      <!-- Top Emojis Card -->
-      <div class="card" draggable="true">
-        <h2>Top Emojis</h2>
-        <div class="emoji-cloud">
-          {% if results.emojis and results.emojis.items()|length > 0 %} {% for
-          emoji, count in results.emojis.items() %}
-          <span class="emoji-tag">{{ emoji }}: {{ count }}</span>
-          {% endfor %} {% else %}
-          <p>No emoji data available</p>
-          {% endif %}
-        </div>
-      </div>
-
       <!-- Links Card -->
       <div class="card" draggable="true">
         <h2>Top Links</h2>
@@ -813,7 +979,108 @@
       </div>
     </div>
 
+    <!-- Emoji Analysis Section -->
+    <div class="section-header">
+      <h2>Emoji Analysis</h2>
+      <p>Detailed analysis of emoji usage in the conversation</p>
+    </div>
+
+    <!-- Emoji Highlight Section -->
+    <div class="emoji-highlight">
+      {% if results.emojis and results.emojis.items()|length > 0 %} {% for
+      emoji, count in results.emojis.items() %} {% if loop.index <= 5 %}
+      <div class="emoji-highlight-item">
+        <div class="emoji-bubble">{{ emoji }}</div>
+        <div class="emoji-count-large">{{ count }}</div>
+      </div>
+      {% endif %} {% endfor %} {% else %}
+      <div class="emoji-highlight-item">
+        <div class="emoji-bubble">😊</div>
+        <div class="emoji-count-large">No top emojis data</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid-container">
+      <!-- Top Emojis Card -->
+      <div class="card" draggable="true">
+        <h2>Top Emojis</h2>
+        <div class="emoji-cloud">
+          {% if results.emojis and results.emojis.items()|length > 0 %} {% for
+          emoji, count in results.emojis.items() %}
+          <span class="emoji-tag"
+            >{{ emoji }} <span class="emoji-count">{{ count }}</span></span
+          >
+          {% endfor %} {% else %}
+          <p>Coming soon</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Overall Emoji Stats Card -->
+      <div class="card" draggable="true">
+        <h2>Overall Emoji Stats</h2>
+        {% if results.emoji_usage %}
+        <div class="overall-emoji-stats">
+          <p>
+            <span class="stat-label">Total Emojis:</span> {{
+            results.emoji_usage.total_emoji_count }}
+          </p>
+          <p>
+            <span class="stat-label">Messages with Emojis:</span> {{
+            results.emoji_usage.messages_with_emojis }}
+          </p>
+          <p>
+            <span class="stat-label">Emoji Percentage:</span> {{
+            results.emoji_usage.emoji_percentage|round(1) }}% of messages
+          </p>
+        </div>
+        {% else %}
+        <p>No emoji usage data available</p>
+        {% endif %}
+      </div>
+
+      <!-- Emoji Usage By Sender Card -->
+      <div class="card" draggable="true">
+        <h2>Emoji Usage By Sender</h2>
+        {% if results.emoji_stats_by_sender and
+        results.emoji_stats_by_sender.items()|length > 0 %}
+        <div class="emoji-stats">
+          {% for sender, stats in results.emoji_stats_by_sender.items() %}
+          <div class="sender-emoji-stats">
+            <h3>{{ sender }}</h3>
+            <p>Total emojis: {{ stats.total_emoji_count }}</p>
+            <p>Avg per message: {{ stats.avg_emojis_per_message|round(2) }}</p>
+            <p>
+              Messages with emojis: {{ stats.messages_with_emojis }} ({{
+              stats.emoji_percentage|round(1) }}%)
+            </p>
+            {% if stats.favorite_emojis %}
+            <p>Favorite emojis:</p>
+            <div class="favorite-emojis">
+              {% for emoji_data in stats.favorite_emojis %}
+              <span class="emoji-tag"
+                >{{ emoji_data[0] }}
+                <span class="emoji-count">{{ emoji_data[1] }}</span></span
+              >
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p>No emoji usage data available</p>
+        {% endif %}
+      </div>
+    </div>
+
     <!-- Visualizations Section -->
+    <div class="section-header">
+      <h2>Visualizations</h2>
+      <p>Visual representation of chat analysis</p>
+    </div>
+
     <div class="visualization">
       <!-- Word Cloud -->
       <div class="chart-wrapper">
@@ -850,15 +1117,16 @@
 
       <!-- Emoji Usage -->
       <div class="chart-wrapper">
-        <h2>
-          {% if chat_type == 'romantic' %}Love Emoji Usage{% else %}Friendly
-          Emoji Usage{% endif %}
-        </h2>
+        <h2>Emoji Usage by Sender</h2>
         <div class="chart-container">
+          {% if results.visualization_paths.emoji_usage_by_sender %}
           <img
-            src="{{ results.visualization_paths.love_counts if chat_type == 'romantic' else results.visualization_paths.friendship_emoji_counts }}"
-            alt="{% if chat_type == 'romantic' %}Love Emoji Counts{% else %}Friendly Emoji Usage{% endif %}"
+            src="{{ results.visualization_paths.emoji_usage_by_sender }}"
+            alt="Emoji Usage by Sender"
           />
+          {% else %}
+          <p>No emoji usage visualization available</p>
+          {% endif %}
         </div>
       </div>
 
@@ -891,10 +1159,14 @@
       <div class="chart-wrapper">
         <h2>Top Emojis</h2>
         <div class="chart-container">
+          {% if results.visualization_paths.top_emojis %}
           <img
             src="{{ results.visualization_paths.top_emojis }}"
             alt="Top Emojis"
           />
+          {% else %}
+          <p>No top emojis visualization available</p>
+          {% endif %}
         </div>
       </div>
 
