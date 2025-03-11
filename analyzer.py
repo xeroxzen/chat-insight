@@ -47,6 +47,15 @@ EXCLUDED_MESSAGES = [
     'security code', 'messages and calls', 'end-to-end encrypted'
 ]
 
+# Define terms to exclude from text analysis but keep for media analysis
+TEXT_ANALYSIS_EXCLUDED_TERMS = [
+    'image omitted', 'video omitted', 'audio omitted', 'sticker omitted',
+    'voice call', 'video call', 'missed voice call', 'missed video call',
+    'media omitted', '<media omitted>', 'image', 'video', 'audio', 'sticker',
+    'call', 'omitted', 'missed', 'answered', 'no answer', 'silenced',
+    'tap to call back', 'click to call back'
+]
+
 # Media message patterns for analysis
 MEDIA_PATTERNS = {
     'image': r'image omitted|‎image omitted|<Media omitted>|<image omitted>',
@@ -205,8 +214,13 @@ def analyze_participants(df: pd.DataFrame) -> tuple:
 def preprocess_message(message: str) -> str:
     """
     Preprocess a message by removing non-word characters (except emojis) and converting to lowercase.
-    Preserves emojis for better analysis.
+    Preserves emojis for better analysis and excludes media-related terms.
     """
+    # Check if message contains any of the excluded terms for text analysis
+    for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+        if term.lower() in message.lower():
+            return ""  # Return empty string for messages with media terms
+    
     # Extracting emojis from the message
     emojis = re.findall(EMOJI_PATTERN, message)
     
@@ -468,7 +482,23 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         
         # Word analysis
         stop_words = set(stopwords.words('english'))
-        all_messages = ' '.join(df['Message'].apply(preprocess_message))
+        # Add media-related terms to stop words
+        for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+            for word in term.lower().split():
+                stop_words.add(word)
+
+        # Filter out messages containing media-related terms
+        filtered_messages = []
+        for message in df['Message']:
+            should_include = True
+            for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+                if term.lower() in str(message).lower():
+                    should_include = False
+                    break
+            if should_include:
+                filtered_messages.append(str(message))
+
+        all_messages = ' '.join([preprocess_message(msg) for msg in filtered_messages])
         words = [word for word in all_messages.split() if word not in stop_words]
         word_freq = Counter(words)
         most_common_words = word_freq.most_common(20)
@@ -1100,14 +1130,31 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
             df['MessageLength'] = df['Message'].str.len()
         
         # Creating and saving wordcloud
+        # Filter out messages containing media-related terms
+        filtered_messages = []
+        for message in df['Message']:
+            should_include = True
+            for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+                if term.lower() in str(message).lower():
+                    should_include = False
+                    break
+            if should_include:
+                filtered_messages.append(str(message))
+
+        # Create custom stopwords set by adding our excluded terms to STOPWORDS
+        custom_stopwords = set(STOPWORDS)
+        for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+            for word in term.lower().split():
+                custom_stopwords.add(word)
+
         wordcloud = WordCloud(
             width=800, 
             height=400, 
             background_color='white', 
-            stopwords=STOPWORDS, 
+            stopwords=custom_stopwords, 
             max_words=200
-        ).generate(' '.join(df['Message']))
-        
+        ).generate(' '.join(filtered_messages))
+
         visualizations['wordcloud'] = save_visualization(wordcloud, 'wordcloud.png', config)
         logger.info(f"Saved wordcloud to: {visualizations['wordcloud']}")
         
