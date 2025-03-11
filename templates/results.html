@@ -1088,6 +1088,167 @@
       </div>
     </div>
 
+    <!-- Media Analysis Section -->
+    <div class="section-header">
+      <h2>Media Analysis</h2>
+      <p>Detailed analysis of media sharing in the conversation</p>
+    </div>
+
+    <!-- Media Highlight Section -->
+    <div class="emoji-highlight">
+      {% if results.media_analysis and results.media_analysis.media_by_type %}
+      {% set media_types = { 'image': '📷', 'video': '🎬', 'audio': '🎵',
+      'voice_call': '📞', 'video_call': '📹', 'missed_voice_call': '📞❌',
+      'missed_video_call': '📹❌' } %} {% for media_type, count in
+      results.media_analysis.media_by_type.items() %} {% if loop.index <= 5 %}
+      <div class="emoji-highlight-item">
+        <div class="emoji-bubble">{{ media_types.get(media_type, '📁') }}</div>
+        <div class="emoji-count-large">{{ count }}</div>
+      </div>
+      {% endif %} {% endfor %} {% else %}
+      <div class="emoji-highlight-item">
+        <div class="emoji-bubble">📁</div>
+        <div class="emoji-count-large">No media data</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="grid-container">
+      <!-- Media Overview Card -->
+      <div class="card" draggable="true">
+        <h2>Media Overview</h2>
+        {% if results.media_analysis %}
+        <div class="overall-emoji-stats">
+          <p>
+            <span class="stat-label">Total Media Items:</span>
+            {{ results.media_analysis.total_media_count }}
+          </p>
+          <p>
+            <span class="stat-label">Images Shared:</span>
+            {{ results.media_analysis.media_by_type.get('image', 0) }}
+          </p>
+          <p>
+            <span class="stat-label">Videos Shared:</span>
+            {{ results.media_analysis.media_by_type.get('video', 0) }}
+          </p>
+          <p>
+            <span class="stat-label">Audio Messages:</span>
+            {{ results.media_analysis.media_by_type.get('audio', 0) }}
+          </p>
+        </div>
+        {% else %}
+        <p>No media data available</p>
+        {% endif %}
+      </div>
+
+      <!-- Call Statistics Card -->
+      <div class="card" draggable="true">
+        <h2>Call Statistics</h2>
+        {% if results.media_analysis %}
+        <div class="overall-emoji-stats">
+          <p>
+            <span class="stat-label">Voice Calls:</span>
+            {{ results.media_analysis.media_by_type.get('voice_call', 0) }}
+          </p>
+          <p>
+            <span class="stat-label">Video Calls:</span>
+            {{ results.media_analysis.media_by_type.get('video_call', 0) }}
+          </p>
+          <p>
+            <span class="stat-label">Missed Voice Calls:</span>
+            {{ results.media_analysis.media_by_type.get('missed_voice_call', 0)
+            }}
+          </p>
+          <p>
+            <span class="stat-label">Missed Video Calls:</span>
+            {{ results.media_analysis.media_by_type.get('missed_video_call', 0)
+            }}
+          </p>
+        </div>
+        {% else %}
+        <p>No call data available</p>
+        {% endif %}
+      </div>
+
+      <!-- Call Duration Card -->
+      <div class="card" draggable="true">
+        <h2>Call Duration</h2>
+        {% if results.media_analysis and results.media_analysis.call_duration %}
+        <div class="overall-emoji-stats">
+          {% for call_type, duration_data in
+          results.media_analysis.call_duration.items() %}
+          <p>
+            <span class="stat-label">{{ call_type|title }} Calls:</span>
+            {{ duration_data.call_count }} calls
+          </p>
+          <p>
+            <span class="stat-label">Total Duration:</span>
+            {{ (duration_data.total_duration / 60)|round(1) }} minutes
+          </p>
+          <p>
+            <span class="stat-label">Average Duration:</span>
+            {{ (duration_data.avg_duration / 60)|round(1) }} minutes
+          </p>
+          <p>
+            <span class="stat-label">Longest Call:</span>
+            {{ (duration_data.max_duration / 60)|round(1) }} minutes
+          </p>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p>No call duration data available</p>
+        {% endif %}
+      </div>
+
+      <!-- Media by Sender Card -->
+      <div class="card" draggable="true">
+        <h2>Top Media Sharers</h2>
+        {% if results.media_analysis and results.media_analysis.media_by_sender
+        %}
+        <ol class="message-list">
+          {% for sender, media_data in
+          results.media_analysis.media_by_sender.items() %} {% if loop.index <=
+          5 %} {% set total_media = 0 %} {% for media_type, count in
+          media_data.items() %} {% set total_media = total_media + count %} {%
+          endfor %}
+          <li>{{ sender }}: {{ total_media }} media items</li>
+          {% endif %} {% endfor %}
+        </ol>
+        {% else %}
+        <p>No media by sender data available</p>
+        {% endif %}
+      </div>
+
+      <!-- Media Sharing Patterns Card -->
+      <div class="card" draggable="true">
+        <h2>Media Sharing Patterns</h2>
+        {% if results.media_analysis and
+        results.media_analysis.media_sharing_patterns %}
+        <div class="overall-emoji-stats">
+          <p>
+            <span class="stat-label">Total Media Count:</span>
+            {{ results.media_analysis.media_sharing_patterns.total_media_count
+            }}
+          </p>
+          {% if
+          results.media_analysis.media_sharing_patterns.most_shared_media_type
+          %}
+          <p>
+            <span class="stat-label">Most Shared Media:</span>
+            {% for sender, data in
+            results.media_analysis.media_sharing_patterns.most_shared_media_type.items()
+            %} {% if loop.index <= 3 %}
+            <br />{{ sender }}: {{ data.type }} ({{ data.count }}) {% endif %}
+            {% endfor %}
+          </p>
+          {% endif %}
+        </div>
+        {% else %}
+        <p>No media sharing patterns data available</p>
+        {% endif %}
+      </div>
+    </div>
+
     <!-- Visualizations Section -->
     <div class="section-header">
       <h2>Visualizations</h2>
@@ -1301,6 +1462,132 @@
         </div>
       </div>
       {% endif %}
+
+      <!-- Media Visualizations Section -->
+      <div class="section-header">
+        <h2>Media Analysis</h2>
+        <p>Visual representation of media sharing patterns</p>
+      </div>
+
+      <!-- Media Dashboard -->
+      <div class="chart-wrapper">
+        <h2>Media Dashboard</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.media_dashboard %}
+          <img
+            src="{{ results.visualization_paths.media_dashboard }}"
+            alt="Media Dashboard"
+          />
+          {% else %}
+          <p>No media dashboard visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Media Types Distribution -->
+      <div class="chart-wrapper">
+        <h2>Media Types Distribution</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.media_types_distribution %}
+          <img
+            src="{{ results.visualization_paths.media_types_distribution }}"
+            alt="Media Types Distribution"
+          />
+          {% else %}
+          <p>No media types distribution visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Media Sharing by Sender -->
+      <div class="chart-wrapper">
+        <h2>Media Sharing by Sender</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.media_by_sender %}
+          <img
+            src="{{ results.visualization_paths.media_by_sender }}"
+            alt="Media Sharing by Sender"
+          />
+          {% else %}
+          <p>No media sharing by sender visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Media Sharing Over Time -->
+      <div class="chart-wrapper">
+        <h2>Media Sharing Over Time</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.media_over_time %}
+          <img
+            src="{{ results.visualization_paths.media_over_time }}"
+            alt="Media Sharing Over Time"
+          />
+          {% else %}
+          <p>No media sharing over time visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Call Patterns Analysis -->
+      <div class="chart-wrapper">
+        <h2>Call Patterns Analysis</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.call_patterns %}
+          <img
+            src="{{ results.visualization_paths.call_patterns }}"
+            alt="Call Patterns Analysis"
+          />
+          {% else %}
+          <p>No call patterns visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Call Duration by Type -->
+      <div class="chart-wrapper">
+        <h2>Call Duration by Type</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.call_duration_by_type %}
+          <img
+            src="{{ results.visualization_paths.call_duration_by_type }}"
+            alt="Call Duration by Type"
+          />
+          {% else %}
+          <p>No call duration visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Average Call Duration by Type -->
+      <div class="chart-wrapper">
+        <h2>Average Call Duration by Type</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.avg_call_duration_by_type %}
+          <img
+            src="{{ results.visualization_paths.avg_call_duration_by_type }}"
+            alt="Average Call Duration by Type"
+          />
+          {% else %}
+          <p>No average call duration visualization available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Media Sharing Patterns -->
+      <div class="chart-wrapper">
+        <h2>Media Sharing Patterns</h2>
+        <div class="chart-container">
+          {% if results.visualization_paths.media_sharing_patterns %}
+          <img
+            src="{{ results.visualization_paths.media_sharing_patterns }}"
+            alt="Media Sharing Patterns"
+          />
+          {% else %}
+          <p>No media sharing patterns visualization available</p>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
     <!-- Floating Action Button and Share Menu -->
