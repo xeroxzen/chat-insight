@@ -14,7 +14,7 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
         csv_file_path (str): Path to save the output CSV file
     """
     try:
-        # Read the text file
+        # Reading the text file
         with open(txt_file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
         
@@ -26,20 +26,20 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
         senders = []
         messages = []
         
-        # Parse each line
+        # Parsing each line
         for i, line in enumerate(lines):
             try:
                 # Expected format: [DD/MM/YYYY, HH:mm:ss] Sender: Message
                 if not line.strip() or not line.startswith('['): 
                     continue
                     
-                # Split datetime and message content
+                # Splitting datetime and message content
                 datetime_str = line[1:line.index(']')]
                 content = line[line.index(']')+2:]
                 
-                # Parse datetime - handle both YYYY and YY formats
+                # Parsing datetime - handling both YYYY and YY formats
                 try:
-                    # Try full year format first (DD/MM/YYYY)
+                    # Trying full year format first (DD/MM/YYYY)
                     date_time = datetime.strptime(datetime_str, '%d/%m/%Y, %H:%M:%S')
                 except ValueError:
                     try:
@@ -49,7 +49,7 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
                         logger.warning("Could not parse date: %s", datetime_str)
                         raise e
                 
-                # Split sender and message
+                # Splitting sender and message
                 sender_message = content.split(':', 1)
                 if len(sender_message) < 2:
                     continue
@@ -57,7 +57,7 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
                 sender = sender_message[0].strip()
                 message = sender_message[1].strip()
                 
-                # Store parsed data - format date as DD/MM/YYYY
+                # Storing parsed data - formatting date as DD/MM/YYYY
                 dates.append(date_time.strftime('%d/%m/%Y'))
                 times.append(date_time.strftime('%H:%M:%S'))
                 senders.append(sender)
@@ -72,7 +72,7 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
         if not dates:
             raise ValueError("No messages were successfully parsed from the file")
             
-        # Create DataFrame with capitalized column names and formatted dates
+        # Creating DataFrame with capitalized column names and formatted dates
         df = pd.DataFrame({
             'Date': dates,  # Already formatted as DD/MM/YYYY strings
             'Time': times,  # Already formatted as HH:MM:SS strings
@@ -80,7 +80,7 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
             'Message': messages
         })
         
-        # Save to CSV
+        # Saving to CSV
         df.to_csv(csv_file_path, index=False)
         logger.info("Saved parsed data to %s", csv_file_path)
         

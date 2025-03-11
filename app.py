@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from contextlib import asynccontextmanager
 
-# Place the current directory to Python path to avoid dir related errors
+# Adding the current directory to Python path to avoid directory related errors
 sys.path.append(str(Path(__file__).parent))
 
 from parser import parse_chat_log
@@ -27,10 +27,10 @@ from file_handler import allowed_file, handle_upload
 from session_manager import SessionManager
 from rate_limiter import RateLimiter
 
-# Set up logging
+# Setting up logging
 logger = logging.getLogger(__name__)
 
-# Generate a secure secret key for session management
+# Generating a secure secret key for session management
 SECRET_KEY = secrets.token_urlsafe(32)
 
 # Security headers middleware
@@ -44,7 +44,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
         return response
 
-# Initialize session manager and rate limiter
+# Initializing session manager and rate limiter
 session_manager = SessionManager(SECRET_KEY)
 rate_limiter = RateLimiter()
 
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Add middleware
+# Adding middleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     SessionMiddleware,
@@ -69,22 +69,22 @@ app.add_middleware(
     path="/"  # Make cookie available for all paths
 )
 
-# Add CORS middleware with strict settings
+# Adding CORS middleware with strict settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["*"],  # To be changed in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Add trusted host middleware
+# Adding trusted host middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]  # In production, replace with specific domains
+    allowed_hosts=["*"]  # To be changed in production
 )
 
-# Ensure base directories exist
+# Ensuring base directories exist
 UPLOAD_FOLDER = "uploads"
 STATIC_FOLDER = "static"
 VISUALS_FOLDER = "static/visuals"
@@ -92,11 +92,11 @@ VISUALS_FOLDER = "static/visuals"
 for folder in [UPLOAD_FOLDER, STATIC_FOLDER, VISUALS_FOLDER]:
     os.makedirs(folder, exist_ok=True)
 
-# Mount static files
+# Mounting static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/visuals", StaticFiles(directory="static/visuals"), name="visuals")
 
-# Set up Jinja2 templates
+# Setting up Jinja2 templates
 templates = Jinja2Templates(directory="templates")
 
 def standardize_results(results: dict) -> dict:
@@ -104,7 +104,7 @@ def standardize_results(results: dict) -> dict:
     if not results:
         return {}
         
-    # Convert all date strings to datetime objects
+    # Converting all date strings to datetime objects
     date_fields = ["most_active_day", "first_message_date", "last_message_date"]
     for field in date_fields:
         if field in results:
@@ -113,7 +113,7 @@ def standardize_results(results: dict) -> dict:
             except ValueError:
                 results[field] = None
             
-    # Map emoji data to top-level emojis field
+    # Mapping emoji data to top-level emojis field
     if "content_analysis" in results and "emoji_usage" in results["content_analysis"]:
         results["emojis"] = results["content_analysis"]["emoji_usage"]
     else:
@@ -164,10 +164,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     try:
-        # Get or create user session
+        # Getting or creating user session
         session = session_manager.get_user_session(request)
         
-        # Check rate limit
+        # Checking rate limit
         if not rate_limiter.check_rate_limit(request):
             raise HTTPException(status_code=429, detail="Too many requests")
         
@@ -182,7 +182,7 @@ async def index(request: Request):
 
 @app.get("/results")
 async def read_root(request: Request):
-    # Check session validity
+    # Checking session validity
     if not session_manager.is_session_valid(request):
         return templates.TemplateResponse(
             request,
@@ -190,11 +190,11 @@ async def read_root(request: Request):
             {"error": "Your session has expired. Please upload your chat file again."}
         )
     
-    # Check rate limit
+    # Checking rate limit
     if not rate_limiter.check_rate_limit(request):
         raise HTTPException(status_code=429, detail="Too many requests")
     
-    # Extend session
+    # Extending session
     session_manager.extend_session(request)
     
     results_str = request.query_params.get("results", "{}")
@@ -207,22 +207,22 @@ async def read_root(request: Request):
 
 @app.get("/visuals/{filename}")
 async def serve_visuals(request: Request, filename: str):
-    # Check session validity
+    # Checking session validity
     if not session_manager.is_session_valid(request):
         raise HTTPException(status_code=401, detail="Session expired")
     
-    # Check rate limit
+    # Checking rate limit
     if not rate_limiter.check_rate_limit(request):
         raise HTTPException(status_code=429, detail="Too many requests")
     
-    # Extend session
+    # Extending session
     session_manager.extend_session(request)
     
-    # Get user session
+    # Getting user session
     session = session_manager.get_user_session(request)
     user_dirs = session_manager.get_user_directories(session["user_id"])
     
-    # Check if file exists in user's directory
+    # Checking if file exists in user's directory
     file_path = user_dirs["visuals"] / filename
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
@@ -245,18 +245,18 @@ async def privacy_policy(request: Request):
 @app.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     try:
-        # Check session validity
+        # Checking session validity
         if not session_manager.is_session_valid(request):
             raise HTTPException(status_code=401, detail="Session expired")
         
-        # Check rate limit
+        # Checking rate limit
         if not rate_limiter.check_rate_limit(request):
             raise HTTPException(status_code=429, detail="Too many requests")
         
-        # Extend session
+        # Extending session
         session_manager.extend_session(request)
         
-        # Get user session and file paths
+        # Getting user session and file paths
         session = session_manager.get_user_session(request)
         file_paths = session_manager.get_user_file_paths(session["user_id"], file.filename)
         
@@ -267,7 +267,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
 
         txt_file_path, csv_file_path = handle_upload(file, file_paths)
         
-        # Add logging to check file contents
+        # Adding logging to check file contents
         with open(txt_file_path, 'r', encoding='utf-8') as f:
             content = f.read()
             if not content.strip():
@@ -292,14 +292,14 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
                 {"error": f"Error analyzing chat log: {str(e)}"}
             )
         
-        # Standardize results before sending to template
+        # Standardizing results before sending to template
         standardized_results = standardize_results(analysis_results)
         
-        # Get the relative paths for visualizations
+        # Getting the relative paths for visualizations
         visualization_paths = {}
         for key, path in standardized_results.get("visualization_paths", {}).items():
             if isinstance(path, (str, Path)):
-                # Convert absolute path to relative path from visuals directory
+                # Converting absolute path to relative path from visuals directory
                 try:
                     relative_path = Path(path).relative_to(file_paths["visuals"])
                     visualization_paths[key] = str(relative_path)
@@ -308,7 +308,7 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
                     logger.error(f"Could not get relative path for {key}: {path}")
                     visualization_paths[key] = str(path)
         
-        # Log all visualization paths being passed to template
+        # Logging all visualization paths being passed to template
         logger.info("All visualization paths being passed to template:")
         for key, path in visualization_paths.items():
             logger.info(f"{key}: {path}")
