@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: chat-insights
-        image: andilejaden/chatinsight
+        image: andilejaden/chatinsight:sha-b7ef52e
         imagePullPolicy: Always
         ports:
           - containerPort: 8000
