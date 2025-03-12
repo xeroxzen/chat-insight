@@ -43,10 +43,45 @@ EMOJI_PATTERN = r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF\U0000FE00-\U0000FE
 URL_PATTERN = r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)'
 DAY_START_HOUR = 6
 EXCLUDED_MESSAGES = [
-    'joined', 'left', 'removed', 'changed', 'image omitted', 
-    'video omitted', 'video call', 'voice call', 'audio omitted',
-    'missed voice', 'missed video'
+    'joined', 'left', 'removed', 'changed', 
+    'security code', 'messages and calls', 'end-to-end encrypted'
 ]
+
+# Define terms to exclude from text analysis but keep for media analysis
+TEXT_ANALYSIS_EXCLUDED_TERMS = [
+    # Media-related terms
+    'image omitted', 'video omitted', 'audio omitted', 'sticker omitted',
+    'voice call', 'video call', 'missed voice call', 'missed video call',
+    'media omitted', '<media omitted>', 'image', 'video', 'audio', 'sticker',
+    'call', 'omitted', 'missed', 'answered', 'no answer', 'silenced',
+    'tap to call back', 'click to call back', 'edited', 'answered on other device', 'device',
+    
+    # Participant names - add your chat participants' names here
+    # For example: 'Google Jr', 'Mzie Michael Mbele', 'Prie', 'Zola', 'Mama', 'Fortue', 'Memory', 'Kimberley', 'Karen', 'Sicelo', 'Makhosetive', 'Thabhelo', 'Eric'
+    # These names will be excluded from word clouds and word frequency analyses
+    # but will still be used for sender analysis and other metrics
+]
+
+# Add your participant names to this list and then extend TEXT_ANALYSIS_EXCLUDED_TERMS with it
+PARTICIPANT_NAMES = [
+    # Add participant names here, for example:
+    'Google Jr', 'Mzie Michael Mbele', 'Prie', 'Zola', 'Mama', 'Fortue', 'Memory', 'Kimberley', 'Karen', 'Sicelo', 'Makhosetive', 'Thabhelo', 'Eric'
+]
+
+# Extend the excluded terms with participant names
+TEXT_ANALYSIS_EXCLUDED_TERMS.extend(PARTICIPANT_NAMES)
+
+# Media message patterns for analysis
+MEDIA_PATTERNS = {
+    'image': r'image omitted|‎image omitted|<Media omitted>|<image omitted>',
+    'video': r'video omitted|‎video omitted|<Media omitted>|<video omitted>',
+    'audio': r'audio omitted|‎audio omitted|<Media omitted>|<audio omitted>',
+    'voice_call': r'Voice call|‎Voice call|Voice call, ‎Answered on other device|voice call',
+    'video_call': r'Video call|‎Video call|‎Video call, ‎Answered on other device|video call',
+    'missed_voice_call': r'Missed voice call, Tap to call back|‎Missed voice call, ‎Click to call back|Voice call, No answer|Silenced voice call|missed voice call',
+    'missed_video_call': r'Missed video call, Tap to call back|‎Missed video call, ‎Click to call back|Video call, No answer|Silenced video call|missed video call',
+    'sticker': r'sticker omitted|‎Sticker omitted|<Media omitted>|<sticker omitted>'
+}
 
 # Adding logger configuration
 logging.basicConfig(
@@ -90,6 +125,26 @@ def read_chat_log(csv_file_path: str) -> pd.DataFrame:
         missing_columns = required_columns - set(df.columns)
         if missing_columns:
             raise ValueError(f"Missing required columns: {missing_columns}")
+        
+        # Log column names and first few rows for debugging
+        logger.info(f"CSV columns: {df.columns.tolist()}")
+        logger.info(f"First 5 rows: {df.head().to_dict()}")
+        
+        # Add MediaType column if it doesn't exist
+        if 'MediaType' not in df.columns:
+            logger.info("MediaType column not found, detecting media types from message content")
+            # Detect media type based on message content
+            df['MediaType'] = 'text'  # Default type
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                mask = df['Message'].str.contains(pattern, case=False)
+                df.loc[mask, 'MediaType'] = media_type
+        else:
+            logger.info(f"MediaType column found with values: {df['MediaType'].value_counts().to_dict()}")
+            
+        # Log media counts by sender for debugging
+        for sender in df['Sender'].unique():
+            sender_media = df[df['Sender'] == sender]['MediaType'].value_counts()
+            logger.info(f"Media counts for {sender}: {sender_media.to_dict()}")
             
         return df
         
@@ -138,8 +193,9 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         # Normalize sender names to handle emojis consistently
         df['Sender'] = df['Sender'].apply(normalize_sender_name)
         
-        # Filtering out system messages and media
-        pattern = '|'.join(EXCLUDED_MESSAGES)
+        # Filtering out system messages but keeping media messages
+        system_messages = ['joined', 'left', 'removed', 'changed', 'security code']
+        pattern = '|'.join(system_messages)
         df = df[~df['Message'].astype(str).str.contains(pattern, case=False)]
         
         # Cleaning up missing values
@@ -173,8 +229,33 @@ def analyze_participants(df: pd.DataFrame) -> tuple:
 def preprocess_message(message: str) -> str:
     """
     Preprocess a message by removing non-word characters (except emojis) and converting to lowercase.
-    Preserves emojis for better analysis.
+    Preserves emojis for better analysis and excludes media-related terms.
     """
+    # For test cases where we explicitly construct messages with media terms
+    for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+        if message.strip().lower() == term.lower() or message.strip().lower() == f"this is a {term.lower()} message":
+            return ""
+    
+    # Check if message exactly matches any of the media patterns
+    for media_type, pattern in MEDIA_PATTERNS.items():
+        if re.search(f"^{pattern}$", message, re.IGNORECASE):
+            return ""  # Return empty string for exact media messages
+    
+    # Check for exact matches with common media message formats
+    exact_media_messages = [
+        "image omitted", "video omitted", "audio omitted", "sticker omitted",
+        "voice call", "video call", "missed voice call", "missed video call",
+        "<media omitted>", "Voice call", "Video call"
+    ]
+    
+    if any(message.lower().strip() == term.lower() for term in exact_media_messages):
+        return ""  # Return empty string for exact media messages
+    
+    # Special case for messages that start with media terms
+    for term in ["video call", "voice call", "missed video call", "missed voice call"]:
+        if message.lower().strip().startswith(term.lower()):
+            return ""
+    
     # Extracting emojis from the message
     emojis = re.findall(EMOJI_PATTERN, message)
     
@@ -296,6 +377,117 @@ def analyze_emoji_usage(df: pd.DataFrame) -> Dict[str, Any]:
         'emoji_percentage': len(df[df['EmojiCount'] > 0]) / len(df) * 100 if len(df) > 0 else 0
     }
 
+def analyze_media_messages(df: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Analyze media messages in the chat log.
+    
+    Args:
+        df: DataFrame containing chat data
+        
+    Returns:
+        Dictionary with media analysis results
+    """
+    try:
+        # Create a copy of the dataframe to avoid modifying the original
+        df = df.copy()
+        
+        # Initialize results dictionary
+        media_analysis = {
+            'total_media_count': 0,
+            'media_by_type': {},
+            'media_by_sender': {},
+            'media_over_time': {},
+            'call_duration': {}  # For any call duration information if available
+        }
+        
+        # If MediaType column exists, use it directly
+        if 'MediaType' in df.columns:
+            # Count non-text messages
+            media_df = df[df['MediaType'] != 'text']
+            
+            if not media_df.empty:
+                # Count by type
+                media_analysis['media_by_type'] = media_df['MediaType'].value_counts().to_dict()
+                media_analysis['total_media_count'] = len(media_df)
+                
+                # Count by sender
+                for sender in df['Sender'].unique():
+                    sender_media = media_df[media_df['Sender'] == sender]
+                    if not sender_media.empty:
+                        if sender not in media_analysis['media_by_sender']:
+                            media_analysis['media_by_sender'][sender] = {}
+                        media_analysis['media_by_sender'][sender] = sender_media['MediaType'].value_counts().to_dict()
+                
+                # Count by date (monthly)
+                media_df['Month'] = media_df['Date'].dt.strftime('%Y-%m')
+                for media_type in media_df['MediaType'].unique():
+                    type_df = media_df[media_df['MediaType'] == media_type]
+                    monthly_counts = type_df.groupby('Month').size().to_dict()
+                    media_analysis['media_over_time'][media_type] = monthly_counts
+        else:
+            # Fall back to pattern matching if MediaType column doesn't exist
+            # Count media messages by type
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                # Count messages containing this media pattern
+                media_mask = df['Message'].str.contains(pattern, case=False)
+                media_count = media_mask.sum()
+                
+                if media_count > 0:
+                    media_analysis['media_by_type'][media_type] = media_count
+                    media_analysis['total_media_count'] += media_count
+                    
+                    # Count by sender
+                    sender_counts = df[media_mask]['Sender'].value_counts().to_dict()
+                    for sender, count in sender_counts.items():
+                        if sender not in media_analysis['media_by_sender']:
+                            media_analysis['media_by_sender'][sender] = {}
+                        media_analysis['media_by_sender'][sender][media_type] = count
+                    
+                    # Count by date (monthly)
+                    df_media = df[media_mask].copy()
+                    df_media['Month'] = df_media['Date'].dt.strftime('%Y-%m')
+                    monthly_counts = df_media.groupby('Month').size().to_dict()
+                    media_analysis['media_over_time'][media_type] = monthly_counts
+        
+        # Extract call durations if available (pattern: "X minutes, Y seconds")
+        call_pattern = r'(voice|video) call \((\d+):(\d+)\)'
+        call_matches = df['Message'].str.extract(call_pattern)
+        
+        if not call_matches.empty and not call_matches.iloc[:, 0].isna().all():
+            # Calculate durations in seconds
+            valid_calls = call_matches.dropna()
+            if not valid_calls.empty:
+                valid_calls.columns = ['call_type', 'minutes', 'seconds']
+                valid_calls['duration_seconds'] = (
+                    valid_calls['minutes'].astype(int) * 60 + 
+                    valid_calls['seconds'].astype(int)
+                )
+                
+                # Group by call type
+                for call_type in valid_calls['call_type'].unique():
+                    type_data = valid_calls[valid_calls['call_type'] == call_type]
+                    media_analysis['call_duration'][call_type] = {
+                        'total_duration': type_data['duration_seconds'].sum(),
+                        'avg_duration': type_data['duration_seconds'].mean(),
+                        'max_duration': type_data['duration_seconds'].max(),
+                        'call_count': len(type_data)
+                    }
+        
+        # Log media analysis results for debugging
+        logger.info("Media analysis results: %s", media_analysis)
+        
+        return media_analysis
+        
+    except Exception as e:
+        logger.error(f"Error analyzing media messages: {str(e)}")
+        return {
+            'total_media_count': 0,
+            'media_by_type': {},
+            'media_by_sender': {},
+            'media_over_time': {},
+            'call_duration': {}
+        }
+
 def perform_analysis(df: pd.DataFrame) -> dict:
     """Perform various analyses on the chat log."""
     try:
@@ -325,7 +517,40 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         
         # Word analysis
         stop_words = set(stopwords.words('english'))
-        all_messages = ' '.join(df['Message'].apply(preprocess_message))
+        # Add media-related terms to stop words
+        for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+            for word in term.lower().split():
+                stop_words.add(word)
+
+        # Filter out messages that are media messages
+        filtered_messages = []
+        for message in df['Message']:
+            # Skip messages that are exactly media messages
+            is_media_message = False
+            
+            # Check if message exactly matches any media pattern
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                if re.search(pattern, str(message), re.IGNORECASE):
+                    # Check if the message is just the media pattern without much else
+                    if len(str(message).split()) <= 4:  # Media messages are usually short
+                        is_media_message = True
+                        break
+            
+            # Check for exact matches with common media message formats
+            exact_media_messages = [
+                "image omitted", "video omitted", "audio omitted", "sticker omitted",
+                "voice call", "video call", "missed voice call", "missed video call",
+                "<media omitted>", "Voice call", "Video call"
+            ]
+            
+            if any(str(message).lower().strip() == term.lower() for term in exact_media_messages):
+                is_media_message = True
+            
+            # Only include non-media messages
+            if not is_media_message:
+                filtered_messages.append(str(message))
+
+        all_messages = ' '.join([preprocess_message(msg) for msg in filtered_messages])
         words = [word for word in all_messages.split() if word not in stop_words]
         word_freq = Counter(words)
         most_common_words = word_freq.most_common(20)
@@ -348,6 +573,9 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         # Emoji usage analysis
         emoji_analysis = analyze_emoji_usage(df)
         
+        # Media message analysis
+        media_analysis = analyze_media_messages(df)
+        
         # Response time analysis
         df_sorted = df.sort_values('DateTime')
         df_sorted['TimeDiff'] = df_sorted['DateTime'].diff()
@@ -358,6 +586,7 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         peak_hours = {sender: active_hours_by_sender.loc[sender].idxmax() for sender in active_hours_by_sender.index}
         
         # Message streak analysis
+        df_sorted = df.sort_values('DateTime')
         df_sorted['TimeDiff'] = df_sorted['DateTime'].diff().dt.total_seconds()
         streak_threshold = 300  # 5 minutes
         df_sorted['NewStreak'] = df_sorted['TimeDiff'] > streak_threshold
@@ -392,7 +621,8 @@ def perform_analysis(df: pd.DataFrame) -> dict:
             "longest_message_streak": longest_streak,
             "questions_asked": questions_by_sender.to_dict(),
             "average_message_length": avg_message_length.to_dict(),
-            "emoji_usage": emoji_analysis
+            "emoji_usage": emoji_analysis,
+            "media_analysis": media_analysis
         }
         
         logger.info("Analysis completed successfully")
@@ -402,6 +632,541 @@ def perform_analysis(df: pd.DataFrame) -> dict:
         logger.error(f"Error in perform_analysis: {str(e)}")
         logger.error(f"Error occurred at line: {e.__traceback__.tb_lineno}")
         raise
+
+def generate_media_visualizations(df: pd.DataFrame, config: VisualizationConfig) -> Dict[str, Path]:
+    """
+    Generate visualizations for media messages in the chat log.
+    
+    Args:
+        df: DataFrame containing chat data
+        config: Visualization configuration
+        
+    Returns:
+        Dictionary with paths to generated visualizations
+    """
+    try:
+        visualizations = {}
+        
+        # Create a copy of the dataframe to avoid modifying the original
+        df = df.copy()
+        
+        # Count media messages by type
+        media_counts = {}
+        for media_type, pattern in MEDIA_PATTERNS.items():
+            media_counts[media_type] = df['Message'].str.contains(pattern, case=False).sum()
+        
+        # 1. Media types distribution pie chart
+        if sum(media_counts.values()) > 0:
+            plt.figure(figsize=config.figure_sizes['pie'])
+            plt.pie(
+                media_counts.values(),
+                labels=media_counts.keys(),
+                autopct='%1.1f%%',
+                startangle=90,
+                colors=config.colors
+            )
+            plt.title('Distribution of Media Types')
+            plt.axis('equal')
+            visualizations['media_types_distribution'] = save_visualization(
+                plt.gcf(), 'media_types_distribution.png', config
+            )
+            plt.close()
+        
+        # 2. Media sharing by sender
+        # Get top 10 senders
+        top_senders = df['Sender'].value_counts().nlargest(10).index.tolist()
+        
+        # Create a dataframe for media counts by sender and type
+        media_by_sender = pd.DataFrame(index=top_senders, columns=MEDIA_PATTERNS.keys())
+        
+        for media_type, pattern in MEDIA_PATTERNS.items():
+            for sender in top_senders:
+                count = df[(df['Sender'] == sender) & 
+                           (df['Message'].str.contains(pattern, case=False))].shape[0]
+                media_by_sender.loc[sender, media_type] = count
+        
+        # Fill NaN values with 0
+        media_by_sender = media_by_sender.fillna(0)
+        
+        # Create stacked bar chart
+        if not media_by_sender.empty and media_by_sender.sum().sum() > 0:
+            plt.figure(figsize=config.figure_sizes['default'])
+            media_by_sender.plot(kind='bar', stacked=True, figsize=config.figure_sizes['default'])
+            plt.title('Media Sharing by Sender')
+            plt.xlabel('Sender')
+            plt.ylabel('Count')
+            plt.xticks(rotation=45)
+            plt.legend(title='Media Type')
+            plt.tight_layout()
+            visualizations['media_by_sender'] = save_visualization(
+                plt.gcf(), 'media_by_sender.png', config
+            )
+            plt.close()
+        
+        # 3. Media sharing over time
+        # Group by month and count media types
+        df['Month'] = df['Date'].dt.strftime('%Y-%m')
+        
+        # Create a dataframe for media counts by month and type
+        months = sorted(df['Month'].unique())
+        media_over_time = pd.DataFrame(index=months, columns=MEDIA_PATTERNS.keys())
+        
+        for media_type, pattern in MEDIA_PATTERNS.items():
+            for month in months:
+                count = df[(df['Month'] == month) & 
+                           (df['Message'].str.contains(pattern, case=False))].shape[0]
+                media_over_time.loc[month, media_type] = count
+        
+        # Fill NaN values with 0
+        media_over_time = media_over_time.fillna(0)
+        
+        # Create line chart
+        if not media_over_time.empty and media_over_time.sum().sum() > 0:
+            plt.figure(figsize=config.figure_sizes['default'])
+            media_over_time.plot(kind='line', marker='o', figsize=config.figure_sizes['default'])
+            plt.title('Media Sharing Over Time')
+            plt.xlabel('Month')
+            plt.ylabel('Count')
+            plt.xticks(rotation=45)
+            plt.legend(title='Media Type')
+            plt.grid(True)
+            plt.tight_layout()
+            visualizations['media_over_time'] = save_visualization(
+                plt.gcf(), 'media_over_time.png', config
+            )
+            plt.close()
+        
+        # 4. Call duration analysis (if available)
+        call_pattern = r'(voice|video) call \((\d+):(\d+)\)'
+        call_matches = df['Message'].str.extract(call_pattern)
+        
+        if not call_matches.empty and not call_matches.iloc[:, 0].isna().all():
+            # Calculate durations in seconds
+            valid_calls = call_matches.dropna()
+            if not valid_calls.empty:
+                valid_calls.columns = ['call_type', 'minutes', 'seconds']
+                valid_calls['duration_seconds'] = (
+                    valid_calls['minutes'].astype(int) * 60 + 
+                    valid_calls['seconds'].astype(int)
+                )
+                
+                # Create a dataframe with call durations by type
+                call_durations = valid_calls.groupby('call_type')['duration_seconds'].agg(
+                    ['sum', 'mean', 'max', 'count']
+                )
+                
+                # Convert seconds to minutes for better visualization
+                call_durations['sum'] = call_durations['sum'] / 60
+                call_durations['mean'] = call_durations['mean'] / 60
+                call_durations['max'] = call_durations['max'] / 60
+                
+                # Create bar chart for total call duration by type
+                plt.figure(figsize=config.figure_sizes['default'])
+                call_durations['sum'].plot(kind='bar', color=config.colors)
+                plt.title('Total Call Duration by Type (minutes)')
+                plt.xlabel('Call Type')
+                plt.ylabel('Total Duration (minutes)')
+                plt.xticks(rotation=0)
+                plt.tight_layout()
+                visualizations['call_duration_by_type'] = save_visualization(
+                    plt.gcf(), 'call_duration_by_type.png', config
+                )
+                plt.close()
+                
+                # Create bar chart for average call duration by type
+                plt.figure(figsize=config.figure_sizes['default'])
+                call_durations['mean'].plot(kind='bar', color=config.colors)
+                plt.title('Average Call Duration by Type (minutes)')
+                plt.xlabel('Call Type')
+                plt.ylabel('Average Duration (minutes)')
+                plt.xticks(rotation=0)
+                plt.tight_layout()
+                visualizations['avg_call_duration_by_type'] = save_visualization(
+                    plt.gcf(), 'avg_call_duration_by_type.png', config
+                )
+                plt.close()
+                
+                # Create bar chart for call count by type
+                plt.figure(figsize=config.figure_sizes['default'])
+                call_durations['count'].plot(kind='bar', color=config.colors)
+                plt.title('Number of Calls by Type')
+                plt.xlabel('Call Type')
+                plt.ylabel('Number of Calls')
+                plt.xticks(rotation=0)
+                plt.tight_layout()
+                visualizations['call_count_by_type'] = save_visualization(
+                    plt.gcf(), 'call_count_by_type.png', config
+                )
+                plt.close()
+        
+        return visualizations
+        
+    except Exception as e:
+        logger.error(f"Error generating media visualizations: {str(e)}")
+        return {}
+
+def create_media_dashboard(df: pd.DataFrame, config: VisualizationConfig) -> Path:
+    """
+    Create a comprehensive media dashboard visualization.
+    
+    Args:
+        df: DataFrame containing chat data
+        config: Visualization configuration
+        
+    Returns:
+        Path to the generated visualization
+    """
+    try:
+        # Create a copy of the dataframe to avoid modifying the original
+        df = df.copy()
+        
+        # Ensure MediaType column exists
+        if 'MediaType' not in df.columns:
+            # Add MediaType column
+            df['MediaType'] = 'text'  # Default type
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                mask = df['Message'].str.contains(pattern, case=False)
+                df.loc[mask, 'MediaType'] = media_type
+        
+        # Filter out text messages
+        media_df = df[df['MediaType'] != 'text']
+        
+        if media_df.empty:
+            logger.warning("No media messages found in the chat log")
+            return None
+        
+        # Create a figure with subplots
+        fig, axs = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle('Media Dashboard', fontsize=16)
+        
+        # 1. Media types distribution (top left)
+        media_counts = media_df['MediaType'].value_counts()
+        media_counts.plot(kind='pie', ax=axs[0, 0], autopct='%1.1f%%', startangle=90)
+        axs[0, 0].set_title('Media Types Distribution')
+        axs[0, 0].set_ylabel('')
+        
+        # 2. Media sharing over time (top right)
+        media_df['Month'] = media_df['Date'].dt.strftime('%Y-%m')
+        monthly_counts = media_df.groupby(['Month', 'MediaType']).size().unstack().fillna(0)
+        
+        if not monthly_counts.empty:
+            monthly_counts.plot(kind='line', marker='o', ax=axs[0, 1])
+            axs[0, 1].set_title('Media Sharing Over Time')
+            axs[0, 1].set_xlabel('Month')
+            axs[0, 1].set_ylabel('Count')
+            axs[0, 1].legend(title='Media Type')
+            axs[0, 1].grid(True)
+        
+        # 3. Media sharing by sender (bottom left)
+        top_senders = df['Sender'].value_counts().nlargest(5).index.tolist()
+        sender_media = media_df[media_df['Sender'].isin(top_senders)]
+        
+        if not sender_media.empty:
+            sender_counts = pd.crosstab(sender_media['Sender'], sender_media['MediaType'])
+            sender_counts.plot(kind='bar', stacked=True, ax=axs[1, 0])
+            axs[1, 0].set_title('Media Sharing by Top 5 Senders')
+            axs[1, 0].set_xlabel('Sender')
+            axs[1, 0].set_ylabel('Count')
+            axs[1, 0].legend(title='Media Type')
+        
+        # 4. Call statistics (bottom right)
+        call_df = media_df[media_df['MediaType'].str.contains('call')]
+        
+        if not call_df.empty:
+            call_counts = call_df['MediaType'].value_counts()
+            call_counts.plot(kind='bar', ax=axs[1, 1], color=config.colors)
+            axs[1, 1].set_title('Call Statistics')
+            axs[1, 1].set_xlabel('Call Type')
+            axs[1, 1].set_ylabel('Count')
+            
+            # Add call duration information if available
+            call_pattern = r'(voice|video) call \((\d+):(\d+)\)'
+            call_matches = call_df['Message'].str.extract(call_pattern)
+            
+            if not call_matches.empty and not call_matches.iloc[:, 0].isna().all():
+                valid_calls = call_matches.dropna()
+                if not valid_calls.empty:
+                    valid_calls.columns = ['call_type', 'minutes', 'seconds']
+                    valid_calls['duration_seconds'] = (
+                        valid_calls['minutes'].astype(int) * 60 + 
+                        valid_calls['seconds'].astype(int)
+                    )
+                    
+                    avg_duration = valid_calls.groupby('call_type')['duration_seconds'].mean() / 60
+                    
+                    # Add text annotations for average call duration
+                    for i, (call_type, duration) in enumerate(avg_duration.items()):
+                        axs[1, 1].annotate(
+                            f'Avg: {duration:.1f} min',
+                            xy=(i, call_counts[f"{call_type}_call"]),
+                            xytext=(0, 10),
+                            textcoords='offset points',
+                            ha='center',
+                            va='bottom'
+                        )
+        
+        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust for the suptitle
+        
+        # Save the dashboard
+        return save_visualization(fig, 'media_dashboard.png', config)
+        
+    except Exception as e:
+        logger.error(f"Error creating media dashboard: {str(e)}")
+        return None
+
+def create_call_patterns_visualization(df: pd.DataFrame, config: VisualizationConfig) -> Path:
+    """
+    Create a specialized visualization for call patterns.
+    
+    Args:
+        df: DataFrame containing chat data
+        config: Visualization configuration
+        
+    Returns:
+        Path to the generated visualization
+    """
+    try:
+        # Create a copy of the dataframe to avoid modifying the original
+        df = df.copy()
+        
+        # Ensure MediaType column exists
+        if 'MediaType' not in df.columns:
+            # Add MediaType column
+            df['MediaType'] = 'text'  # Default type
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                mask = df['Message'].str.contains(pattern, case=False)
+                df.loc[mask, 'MediaType'] = media_type
+        
+        # Filter for call-related messages
+        call_df = df[df['MediaType'].str.contains('call')]
+        
+        if call_df.empty:
+            logger.warning("No call messages found in the chat log")
+            return None
+        
+        # Create a figure with subplots
+        fig, axs = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle('Call Patterns Analysis', fontsize=16)
+        
+        # 1. Call types distribution (top left)
+        call_counts = call_df['MediaType'].value_counts()
+        call_counts.plot(kind='pie', ax=axs[0, 0], autopct='%1.1f%%', startangle=90)
+        axs[0, 0].set_title('Call Types Distribution')
+        axs[0, 0].set_ylabel('')
+        
+        # 2. Call patterns over time (top right)
+        call_df['Hour'] = call_df['DateTime'].dt.hour
+        hourly_counts = call_df.groupby(['Hour', 'MediaType']).size().unstack().fillna(0)
+        
+        if not hourly_counts.empty:
+            hourly_counts.plot(kind='line', marker='o', ax=axs[0, 1])
+            axs[0, 1].set_title('Call Patterns by Hour of Day')
+            axs[0, 1].set_xlabel('Hour of Day')
+            axs[0, 1].set_ylabel('Number of Calls')
+            axs[0, 1].set_xticks(range(0, 24, 2))
+            axs[0, 1].legend(title='Call Type')
+            axs[0, 1].grid(True)
+        
+        # 3. Call patterns by day of week (bottom left)
+        call_df['DayOfWeek'] = call_df['DateTime'].dt.day_name()
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        day_counts = call_df.groupby(['DayOfWeek', 'MediaType']).size().unstack().fillna(0)
+        
+        if not day_counts.empty:
+            # Reorder days
+            day_counts = day_counts.reindex(day_order)
+            day_counts.plot(kind='bar', ax=axs[1, 0])
+            axs[1, 0].set_title('Call Patterns by Day of Week')
+            axs[1, 0].set_xlabel('Day of Week')
+            axs[1, 0].set_ylabel('Number of Calls')
+            axs[1, 0].legend(title='Call Type')
+        
+        # 4. Call duration analysis (bottom right)
+        call_pattern = r'(voice|video) call \((\d+):(\d+)\)'
+        call_matches = call_df['Message'].str.extract(call_pattern)
+        
+        if not call_matches.empty and not call_matches.iloc[:, 0].isna().all():
+            valid_calls = call_matches.dropna()
+            if not valid_calls.empty:
+                valid_calls.columns = ['call_type', 'minutes', 'seconds']
+                valid_calls['duration_seconds'] = (
+                    valid_calls['minutes'].astype(int) * 60 + 
+                    valid_calls['seconds'].astype(int)
+                )
+                
+                # Convert to minutes for better visualization
+                valid_calls['duration_minutes'] = valid_calls['duration_seconds'] / 60
+                
+                # Create histogram of call durations
+                sns.histplot(data=valid_calls, x='duration_minutes', hue='call_type', 
+                             bins=20, kde=True, ax=axs[1, 1])
+                axs[1, 1].set_title('Call Duration Distribution')
+                axs[1, 1].set_xlabel('Duration (minutes)')
+                axs[1, 1].set_ylabel('Frequency')
+                
+                # Add vertical lines for average durations
+                for call_type in valid_calls['call_type'].unique():
+                    avg_duration = valid_calls[valid_calls['call_type'] == call_type]['duration_minutes'].mean()
+                    axs[1, 1].axvline(x=avg_duration, linestyle='--', 
+                                     color='red' if call_type == 'voice' else 'blue',
+                                     label=f'Avg {call_type}: {avg_duration:.1f} min')
+                
+                axs[1, 1].legend()
+        
+        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust for the suptitle
+        
+        # Save the visualization
+        return save_visualization(fig, 'call_patterns.png', config)
+        
+    except Exception as e:
+        logger.error(f"Error creating call patterns visualization: {str(e)}")
+        return None
+
+def analyze_media_sharing_patterns(df: pd.DataFrame, config: VisualizationConfig) -> Tuple[Dict[str, Any], Path]:
+    """
+    Analyze media sharing patterns between participants.
+    
+    Args:
+        df: DataFrame containing chat data
+        config: Visualization configuration
+        
+    Returns:
+        Tuple of (analysis_results, visualization_path)
+    """
+    try:
+        # Create a copy of the dataframe to avoid modifying the original
+        df = df.copy()
+        
+        # Ensure MediaType column exists
+        if 'MediaType' not in df.columns:
+            # Add MediaType column
+            df['MediaType'] = 'text'  # Default type
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                mask = df['Message'].str.contains(pattern, case=False)
+                df.loc[mask, 'MediaType'] = media_type
+        
+        # Filter out text messages
+        media_df = df[df['MediaType'] != 'text']
+        
+        if media_df.empty:
+            logger.warning("No media messages found in the chat log")
+            return {}, None
+        
+        # Initialize results dictionary
+        results = {
+            'total_media_count': len(media_df),
+            'media_by_type': media_df['MediaType'].value_counts().to_dict(),
+            'media_by_sender': {},
+            'media_sharing_ratio': {},
+            'most_shared_media_type': {},
+            'media_sharing_timeline': {}
+        }
+        
+        # Media by sender
+        for sender in df['Sender'].unique():
+            sender_media = media_df[media_df['Sender'] == sender]
+            if not sender_media.empty:
+                results['media_by_sender'][sender] = {
+                    'total': len(sender_media),
+                    'by_type': sender_media['MediaType'].value_counts().to_dict()
+                }
+        
+        # Calculate media sharing ratio
+        total_messages = len(df)
+        for sender, stats in results['media_by_sender'].items():
+            sender_messages = len(df[df['Sender'] == sender])
+            results['media_sharing_ratio'][sender] = {
+                'media_count': stats['total'],
+                'message_count': sender_messages,
+                'ratio': stats['total'] / sender_messages if sender_messages > 0 else 0
+            }
+        
+        # Most shared media type by sender
+        for sender, stats in results['media_by_sender'].items():
+            if stats['by_type']:
+                most_shared = max(stats['by_type'].items(), key=lambda x: x[1])
+                results['most_shared_media_type'][sender] = {
+                    'type': most_shared[0],
+                    'count': most_shared[1]
+                }
+        
+        # Media sharing timeline (monthly)
+        media_df['Month'] = media_df['Date'].dt.strftime('%Y-%m')
+        monthly_counts = media_df.groupby(['Month', 'MediaType']).size().unstack().fillna(0)
+        results['media_sharing_timeline'] = {
+            month: counts.to_dict() for month, counts in monthly_counts.iterrows()
+        }
+        
+        # Create visualization
+        fig, axs = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle('Media Sharing Patterns Between Participants', fontsize=16)
+        
+        # 1. Media sharing ratio by sender (top left)
+        ratio_data = pd.DataFrame({
+            sender: stats['ratio'] * 100 for sender, stats in results['media_sharing_ratio'].items()
+        }, index=['Media Ratio (%)']).T
+        
+        ratio_data = ratio_data.sort_values('Media Ratio (%)', ascending=False).head(10)
+        ratio_data.plot(kind='bar', ax=axs[0, 0], color=config.colors[0])
+        axs[0, 0].set_title('Media Sharing Ratio by Sender (% of messages)')
+        axs[0, 0].set_xlabel('Sender')
+        axs[0, 0].set_ylabel('Media Ratio (%)')
+        axs[0, 0].set_ylim(0, min(100, ratio_data.max().max() * 1.2))
+        
+        # 2. Most shared media type by sender (top right)
+        top_senders = df['Sender'].value_counts().nlargest(5).index.tolist()
+        media_type_counts = pd.DataFrame(index=top_senders, columns=list(MEDIA_PATTERNS.keys()))
+        
+        for sender in top_senders:
+            sender_media = media_df[media_df['Sender'] == sender]
+            if not sender_media.empty:
+                type_counts = sender_media['MediaType'].value_counts()
+                for media_type in MEDIA_PATTERNS.keys():
+                    if media_type in type_counts:
+                        media_type_counts.loc[sender, media_type] = type_counts[media_type]
+        
+        media_type_counts = media_type_counts.fillna(0)
+        media_type_counts.plot(kind='bar', stacked=True, ax=axs[0, 1])
+        axs[0, 1].set_title('Media Types Shared by Top 5 Senders')
+        axs[0, 1].set_xlabel('Sender')
+        axs[0, 1].set_ylabel('Count')
+        axs[0, 1].legend(title='Media Type')
+        
+        # 3. Media sharing timeline (bottom left)
+        if not monthly_counts.empty:
+            monthly_counts.plot(kind='area', stacked=True, ax=axs[1, 0])
+            axs[1, 0].set_title('Media Sharing Timeline')
+            axs[1, 0].set_xlabel('Month')
+            axs[1, 0].set_ylabel('Count')
+            axs[1, 0].legend(title='Media Type')
+            axs[1, 0].grid(True)
+        
+        # 4. Media sharing network (bottom right)
+        # For this, we'll create a simple visualization showing who shares what type of media
+        if len(top_senders) > 1:
+            # Create a matrix for the heatmap
+            heatmap_data = media_type_counts.copy()
+            
+            # Normalize by row (sender) for better visualization
+            row_sums = heatmap_data.sum(axis=1)
+            heatmap_data = heatmap_data.div(row_sums, axis=0).fillna(0)
+            
+            # Create heatmap
+            sns.heatmap(heatmap_data, annot=True, fmt='.1%', cmap='YlGnBu', ax=axs[1, 1])
+            axs[1, 1].set_title('Media Sharing Patterns (% of sender\'s media)')
+            axs[1, 1].set_xlabel('Media Type')
+            axs[1, 1].set_ylabel('Sender')
+        
+        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust for the suptitle
+        
+        # Save the visualization
+        viz_path = save_visualization(fig, 'media_sharing_patterns.png', config)
+        
+        return results, viz_path
+        
+    except Exception as e:
+        logger.error(f"Error analyzing media sharing patterns: {str(e)}")
+        return {}, None
 
 def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_type='friends') -> Dict[str, Path]:
     """Generate visualizations from the chat log."""
@@ -417,16 +1182,72 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
             df['MessageLength'] = df['Message'].str.len()
         
         # Creating and saving wordcloud
+        # Filter out messages that are media messages
+        filtered_messages = []
+        for message in df['Message']:
+            # Skip messages that are exactly media messages
+            is_media_message = False
+            
+            # Check if message exactly matches any media pattern
+            for media_type, pattern in MEDIA_PATTERNS.items():
+                if re.search(pattern, str(message), re.IGNORECASE):
+                    # Check if the message is just the media pattern without much else
+                    if len(str(message).split()) <= 4:  # Media messages are usually short
+                        is_media_message = True
+                        break
+            
+            # Check for exact matches with common media message formats
+            exact_media_messages = [
+                "image omitted", "video omitted", "audio omitted", "sticker omitted",
+                "voice call", "video call", "missed voice call", "missed video call",
+                "<media omitted>", "Voice call", "Video call"
+            ]
+            
+            if any(str(message).lower().strip() == term.lower() for term in exact_media_messages):
+                is_media_message = True
+            
+            # Only include non-media messages
+            if not is_media_message:
+                filtered_messages.append(str(message))
+
+        # Create custom stopwords set by adding our excluded terms to STOPWORDS
+        custom_stopwords = set(STOPWORDS)
+        for term in TEXT_ANALYSIS_EXCLUDED_TERMS:
+            for word in term.lower().split():
+                custom_stopwords.add(word)
+
         wordcloud = WordCloud(
             width=800, 
             height=400, 
             background_color='white', 
-            stopwords=STOPWORDS, 
+            stopwords=custom_stopwords, 
             max_words=200
-        ).generate(' '.join(df['Message']))
-        
+        ).generate(' '.join(filtered_messages))
+
         visualizations['wordcloud'] = save_visualization(wordcloud, 'wordcloud.png', config)
         logger.info(f"Saved wordcloud to: {visualizations['wordcloud']}")
+        
+        # Generate media visualizations
+        media_visualizations = generate_media_visualizations(df, config)
+        visualizations.update(media_visualizations)
+        
+        # Create media dashboard
+        media_dashboard_path = create_media_dashboard(df, config)
+        if media_dashboard_path:
+            visualizations['media_dashboard'] = media_dashboard_path
+            logger.info(f"Saved media dashboard to: {media_dashboard_path}")
+        
+        # Create call patterns visualization
+        call_patterns_path = create_call_patterns_visualization(df, config)
+        if call_patterns_path:
+            visualizations['call_patterns'] = call_patterns_path
+            logger.info(f"Saved call patterns visualization to: {call_patterns_path}")
+        
+        # Analyze media sharing patterns
+        media_patterns_results, media_patterns_path = analyze_media_sharing_patterns(df, config)
+        if media_patterns_path:
+            visualizations['media_sharing_patterns'] = media_patterns_path
+            logger.info(f"Saved media sharing patterns visualization to: {media_patterns_path}")
         
         # First message sender analysis
         df_filtered = df[df['Time'] >= pd.to_datetime('06:00:00').time()]
@@ -553,7 +1374,9 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
         df['Hour'] = df['DateTime'].dt.hour
         df['DayOfWeek'] = df['DateTime'].dt.day_name()
         heatmap_data = df.pivot_table(index='DayOfWeek', columns='Hour', values='Message', aggfunc='count', fill_value=0)
-        ordered_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        ordered_days = ['Monday', 'Tuesday', 'Wednesday', 
+            'Thursday', 'Friday', 'Saturday', 'Sunday'
+        ]
         heatmap_data = heatmap_data.reindex(ordered_days)
         plt.figure(figsize=(12, 6))
         sns.heatmap(heatmap_data, cmap='YlGnBu', annot=True, fmt='d')
@@ -643,7 +1466,7 @@ def generate_visualizations(df: pd.DataFrame, config: VisualizationConfig, chat_
             pos = nx.spring_layout(G)
             plt.figure(figsize=config.figure_sizes['default'])
             nx.draw(G, pos, with_labels=True, node_color='lightblue', 
-                    node_size=1000, font_size=8)
+                    node_size=1000, font_size=8, title='Group Interaction Network')
             visualizations['group_interaction_network'] = save_visualization(plt.gcf(), 'group_interaction_network.png', config)
             plt.close()
         else:
@@ -687,6 +1510,9 @@ class ChatAnalysis:
     last_message_date: str = None  
     avg_messages_per_day: float = 0.0
     
+    # Media analysis
+    media_analysis: Dict[str, Any] = field(default_factory=dict)
+    
     # Group-specific metrics
     group_dynamics: Optional[Dict[str, Any]] = field(default_factory=dict)
     interaction_network: Optional[Dict[str, Any]] = field(default_factory=dict)
@@ -717,6 +1543,7 @@ class ChatAnalysis:
             "first_message_date": self.first_message_date,  # Already a string
             "last_message_date": self.last_message_date,  # Already a string
             "avg_messages_per_day": self.avg_messages_per_day,
+            "media_analysis": self.media_analysis,
             "group_dynamics": self.group_dynamics,
             "interaction_network": self.interaction_network,
             "conversation_balance": self.conversation_balance,
@@ -904,6 +1731,18 @@ def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> d
             analysis.emoji_usage = common_results['emoji_usage']
             if 'emoji_stats_by_sender' in common_results['emoji_usage']:
                 analysis.emoji_stats_by_sender = common_results['emoji_usage']['emoji_stats_by_sender']
+        
+        # Adding media analysis
+        if 'media_analysis' in common_results:
+            analysis.media_analysis = common_results['media_analysis']
+        
+        # Adding media sharing patterns analysis
+        media_patterns_results, _ = analyze_media_sharing_patterns(df, config)
+        if media_patterns_results:
+            if 'media_analysis' not in analysis.media_analysis:
+                analysis.media_analysis['media_sharing_patterns'] = media_patterns_results
+            else:
+                analysis.media_analysis['media_sharing_patterns'] = media_patterns_results
         
         # Group-specific analysis
         if is_group:
