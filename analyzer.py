@@ -49,12 +49,27 @@ EXCLUDED_MESSAGES = [
 
 # Define terms to exclude from text analysis but keep for media analysis
 TEXT_ANALYSIS_EXCLUDED_TERMS = [
+    # Media-related terms
     'image omitted', 'video omitted', 'audio omitted', 'sticker omitted',
     'voice call', 'video call', 'missed voice call', 'missed video call',
     'media omitted', '<media omitted>', 'image', 'video', 'audio', 'sticker',
     'call', 'omitted', 'missed', 'answered', 'no answer', 'silenced',
-    'tap to call back', 'click to call back', 'edited'
+    'tap to call back', 'click to call back', 'edited', 'answered on other device', 'device',
+    
+    # Participant names - add your chat participants' names here
+    # For example: 'Google Jr', 'Mzie Michael Mbele', 'Prie', 'Zola', 'Mama', 'Fortue', 'Memory', 'Kimberley', 'Karen', 'Sicelo', 'Makhosetive', 'Thabhelo', 'Eric'
+    # These names will be excluded from word clouds and word frequency analyses
+    # but will still be used for sender analysis and other metrics
 ]
+
+# Add your participant names to this list and then extend TEXT_ANALYSIS_EXCLUDED_TERMS with it
+PARTICIPANT_NAMES = [
+    # Add participant names here, for example:
+    'Google Jr', 'Mzie Michael Mbele', 'Prie', 'Zola', 'Mama', 'Fortue', 'Memory', 'Kimberley', 'Karen', 'Sicelo', 'Makhosetive', 'Thabhelo', 'Eric'
+]
+
+# Extend the excluded terms with participant names
+TEXT_ANALYSIS_EXCLUDED_TERMS.extend(PARTICIPANT_NAMES)
 
 # Media message patterns for analysis
 MEDIA_PATTERNS = {
