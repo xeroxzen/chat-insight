@@ -94,7 +94,12 @@ for folder in [UPLOAD_FOLDER, STATIC_FOLDER, VISUALS_FOLDER]:
 
 # Mounting static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# Mount the visuals directory directly for easier access to visualization files
 app.mount("/visuals", StaticFiles(directory="static/visuals"), name="visuals")
+
+# Note: We're keeping both the direct mount and the route-based approach for compatibility
+# The route-based approach (/visuals/{user_id}/{filename}) provides security checks
+# while the direct mount is simpler but less secure
 
 # Setting up Jinja2 templates
 templates = Jinja2Templates(directory="templates")
@@ -102,7 +107,7 @@ templates = Jinja2Templates(directory="templates")
 def standardize_results(results: dict) -> dict:
     """Standardize the results format for template rendering."""
     if not results:
-        return {}
+        return {"visualization_paths": {}}
         
     # Converting all date strings to datetime objects
     date_fields = ["most_active_day", "first_message_date", "last_message_date"]
@@ -133,6 +138,10 @@ def standardize_results(results: dict) -> dict:
     for field, default_value in required_fields.items():
         if field not in results:
             results[field] = default_value
+    
+    # Ensure visualization_paths exists
+    if "visualization_paths" not in results:
+        results["visualization_paths"] = {}
             
     return results
 
@@ -197,16 +206,77 @@ async def read_root(request: Request):
     # Extending session
     session_manager.extend_session(request)
     
+    # Getting user session
+    session = session_manager.get_user_session(request)
+    user_id = session["user_id"]
+    
     results_str = request.query_params.get("results", "{}")
     try:
         results = json.loads(results_str)
         results = standardize_results(results)
+        
+        # Ensure visualization_paths is properly set in the results
+        if "visualization_paths" not in results:
+            results["visualization_paths"] = {}
+        
+        # Update visualization paths to include user_id
+        updated_paths = {}
+        for key, path in results["visualization_paths"].items():
+            if isinstance(path, str):
+                if not path.startswith(f"/visuals/{user_id}/"):
+                    # Extract filename if it's a path
+                    if "/" in path:
+                        filename = path.split("/")[-1]
+                    else:
+                        filename = path
+                    # Use the same format as in upload_file
+                    updated_paths[key] = f"/visuals/{user_id}/{filename}"
+                else:
+                    # Path already has the correct format
+                    updated_paths[key] = path
+            else:
+                updated_paths[key] = path
+        
+        results["visualization_paths"] = updated_paths
+            
     except json.JSONDecodeError:
-        results = {}
+        results = {"visualization_paths": {}}
+        
     return templates.TemplateResponse(request, "results.html", {"results": results})
 
+@app.get("/visuals/{user_id}/{filename}")
+async def serve_visuals(request: Request, user_id: str, filename: str):
+    # Checking session validity
+    if not session_manager.is_session_valid(request):
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    # Checking rate limit
+    if not rate_limiter.check_rate_limit(request):
+        raise HTTPException(status_code=429, detail="Too many requests")
+    
+    # Extending session
+    session_manager.extend_session(request)
+    
+    # Getting user session
+    session = session_manager.get_user_session(request)
+    
+    # Security check: Only allow access to the user's own files
+    if user_id != session["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get user directories
+    user_dirs = session_manager.get_user_directories(user_id)
+    
+    # Checking if file exists in user's directory
+    file_path = user_dirs["visuals"] / filename
+    if not file_path.exists():
+        logger.error(f"File not found: {file_path}")
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(str(file_path))
+
 @app.get("/visuals/{filename}")
-async def serve_visuals(request: Request, filename: str):
+async def serve_visuals_legacy(request: Request, filename: str):
     # Checking session validity
     if not session_manager.is_session_valid(request):
         raise HTTPException(status_code=401, detail="Session expired")
@@ -225,6 +295,7 @@ async def serve_visuals(request: Request, filename: str):
     # Checking if file exists in user's directory
     file_path = user_dirs["visuals"] / filename
     if not file_path.exists():
+        logger.error(f"Legacy file not found: {file_path}")
         raise HTTPException(status_code=404, detail="File not found")
     
     return FileResponse(str(file_path))
@@ -295,27 +366,68 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         # Standardizing results before sending to template
         standardized_results = standardize_results(analysis_results)
         
-        # Getting the relative paths for visualizations
+        # Log the original visualization paths from analysis_results
+        logger.info("Original visualization paths from analysis_results:")
+        for key, path in analysis_results.get("visualization_paths", {}).items():
+            logger.info(f"Original {key}: {path}")
+        
+        # Getting the relative paths for visualizations and updating standardized_results
         visualization_paths = {}
         for key, path in standardized_results.get("visualization_paths", {}).items():
             if isinstance(path, (str, Path)):
                 # Converting absolute path to relative path from visuals directory
                 try:
-                    relative_path = Path(path).relative_to(file_paths["visuals"])
-                    visualization_paths[key] = str(relative_path)
-                    logger.info(f"Visualization path for {key}: {relative_path}")
-                except ValueError:
-                    logger.error(f"Could not get relative path for {key}: {path}")
-                    visualization_paths[key] = str(path)
+                    # Extract the user_id and filename
+                    user_id = session['user_id']
+                    
+                    # If path is a Path object, convert to string
+                    path_str = str(path)
+                    
+                    # Extract the filename
+                    filename = os.path.basename(path_str)
+                    
+                    # Create the direct path
+                    direct_path = f"/visuals/{user_id}/{filename}"
+                    
+                    visualization_paths[key] = direct_path
+                    logger.info(f"Visualization path for {key}: {direct_path}")
+                except Exception as e:
+                    logger.error(f"Error processing path for {key}: {path}, Error: {str(e)}")
+                    # If we can't process the path, use a fallback
+                    try:
+                        filename = os.path.basename(str(path))
+                        visualization_paths[key] = f"/visuals/{session['user_id']}/{filename}"
+                        logger.info(f"Using fallback filename for {key}: {visualization_paths[key]}")
+                    except:
+                        visualization_paths[key] = str(path)
+                        logger.error(f"Could not extract filename for {key}: {path}")
+        
+        # Update the visualization_paths in standardized_results
+        standardized_results["visualization_paths"] = visualization_paths
         
         # Logging all visualization paths being passed to template
         logger.info("All visualization paths being passed to template:")
         for key, path in visualization_paths.items():
             logger.info(f"{key}: {path}")
+            
+        # Check specifically for group visualization paths
+        if standardized_results.get('is_group', False):
+            logger.info("Checking group-specific visualization paths:")
+            if 'group_participation' in visualization_paths:
+                logger.info(f"group_participation: {visualization_paths['group_participation']}")
+            else:
+                logger.error("group_participation is missing from visualization_paths!")
+                
+            if 'group_interaction_network' in visualization_paths:
+                logger.info(f"group_interaction_network: {visualization_paths['group_interaction_network']}")
+            else:
+                logger.error("group_interaction_network is missing from visualization_paths!")
+            
+        # Log the is_group flag to verify it's being set correctly
+        logger.info(f"Is group chat: {standardized_results.get('is_group', False)}")
         
         return templates.TemplateResponse(request, "results.html", {
-            "results": standardized_results,
-            "visualization_paths": visualization_paths
+            "results": standardized_results
         })
         
     except Exception as e:
@@ -324,6 +436,136 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             request, "index.html",
             {"error": f"An unexpected error occurred: {str(e)}"}
         )
+
+@app.get("/debug/files/{user_id}")
+async def debug_files(request: Request, user_id: str):
+    """Debug route to check the actual files in a user's directory."""
+    try:
+        # Checking session validity
+        if not session_manager.is_session_valid(request):
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        # Getting user session
+        session = session_manager.get_user_session(request)
+        
+        # Security check: Only allow access to the user's own files or admin
+        if user_id != session["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Get user directories
+        user_dirs = session_manager.get_user_directories(user_id)
+        
+        # List files in the user's visuals directory
+        visuals_dir = user_dirs["visuals"]
+        files = []
+        if visuals_dir.exists():
+            files = [str(f.relative_to(visuals_dir)) for f in visuals_dir.glob("*") if f.is_file()]
+        
+        # Return the list of files
+        return {
+            "user_id": user_id,
+            "visuals_dir": str(visuals_dir),
+            "files": files,
+            "file_count": len(files)
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_files route: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+@app.get("/debug/paths")
+async def debug_paths(request: Request):
+    """Debug route to check the visualization paths being passed to the template."""
+    try:
+        # Checking session validity
+        if not session_manager.is_session_valid(request):
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        # Getting user session
+        session = session_manager.get_user_session(request)
+        user_id = session["user_id"]
+        
+        # Get user directories
+        user_dirs = session_manager.get_user_directories(user_id)
+        
+        # List files in the user's visuals directory
+        visuals_dir = user_dirs["visuals"]
+        files = []
+        if visuals_dir.exists():
+            files = [str(f.relative_to(visuals_dir)) for f in visuals_dir.glob("*") if f.is_file()]
+        
+        # Check for group-specific files
+        group_files = [f for f in files if "group_" in f]
+        
+        # Create mock visualization paths
+        visualization_paths = {}
+        for file in files:
+            key = Path(file).stem
+            visualization_paths[key] = f"/visuals/{user_id}/{file}"
+        
+        return {
+            "user_id": user_id,
+            "visuals_dir": str(visuals_dir),
+            "files": files,
+            "group_files": group_files,
+            "visualization_paths": visualization_paths
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_paths route: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+@app.get("/debug/html")
+async def debug_html(request: Request):
+    """Debug route to check the actual HTML being rendered."""
+    try:
+        # Checking session validity
+        if not session_manager.is_session_valid(request):
+            raise HTTPException(status_code=401, detail="Session expired")
+        
+        # Getting user session
+        session = session_manager.get_user_session(request)
+        user_id = session["user_id"]
+        
+        # Get user directories
+        user_dirs = session_manager.get_user_directories(user_id)
+        
+        # List files in the user's visuals directory
+        visuals_dir = user_dirs["visuals"]
+        files = []
+        if visuals_dir.exists():
+            files = [str(f.relative_to(visuals_dir)) for f in visuals_dir.glob("*") if f.is_file()]
+        
+        # Create mock results with visualization paths
+        results = {
+            "is_group": True,
+            "visualization_paths": {},
+            "group_dynamics": {
+                "most_active_member": "User1",
+                "least_active_member": "User2"
+            }
+        }
+        
+        # Add visualization paths for all files
+        for file in files:
+            key = Path(file).stem
+            results["visualization_paths"][key] = f"/visuals/{user_id}/{file}"
+        
+        # Render the template with the mock results
+        html = templates.get_template("results.html").render(results=results)
+        
+        # Extract the group visualization sections
+        import re
+        group_sections = re.findall(r'<div class="chart-wrapper">\s*<h2>(Group [^<]+)</h2>.*?</div>\s*</div>', html, re.DOTALL)
+        
+        return {
+            "user_id": user_id,
+            "is_group": True,
+            "group_files": [f for f in files if "group_" in f],
+            "group_sections": group_sections,
+            "visualization_paths": results["visualization_paths"]
+        }
+    except Exception as e:
+        logger.error(f"Error in debug_html route: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -895,54 +895,50 @@
       <!-- Chat Type Card -->
       <div class="card" draggable="true">
         <h2>Chat Type</h2>
-        <p>{{ 'Group Chat' if results.is_group else 'Individual Chat' }}</p>
-        {% if results.is_group %}
-        <p>Number of Participants: {{ results.participant_count }}</p>
-        {% endif %}
+        <p>Group Chat</p>
+        
+        <p>Number of Participants: 5</p>
+        
       </div>
 
-      {% if results.is_group %}
+      
       <!-- Group Activity Distribution -->
       <div class="card" draggable="true">
         <h2>Group Activity Distribution</h2>
         <p>
-          Most Active Member: {{ results.group_dynamics.most_active_member }}
+          Most Active Member: User1
         </p>
         <p>
-          Least Active Member: {{ results.group_dynamics.least_active_member }}
+          Least Active Member: User3
         </p>
       </div>
-      {% else %}
-      <!-- Conversation Balance -->
-      <div class="card" draggable="true">
-        <h2>Conversation Balance</h2>
-        <p>Message ratio: {{ results.conversation_balance.message_ratio }}</p>
-      </div>
-      {% endif %}
+      
 
       <!-- Message Counts Card -->
       <div class="card" draggable="true">
         <h2>Message Counts</h2>
         <ol class="message-list">
-          {% for participant, count in results.top_participants.items() %}
-          <li>{{ participant }}: {{ count }}</li>
-          {% endfor %}
+          
+          <li>User1: 500</li>
+          
+          <li>User2: 300</li>
+          
+          <li>User3: 200</li>
+          
         </ol>
       </div>
 
       <!-- Most Active Day Card -->
       <div class="card" draggable="true">
         <h2>Most Active Day</h2>
-        <p>{{ results.most_active_day.strftime('%d %B %Y') }}</p>
+        <p>15 June 2023</p>
       </div>
 
       <!-- Most Active Time Card -->
       <div class="card" draggable="true">
         <h2>Most Active Time</h2>
         <p>
-          {% if results.most_active_time is not none %} {{
-          results.most_active_time }}:00 hours {% else %} No data available {%
-          endif %}
+           20:00 hours 
         </p>
       </div>
 
@@ -950,12 +946,9 @@
       <div class="card" draggable="true">
         <h2>Most Commonly Used Words</h2>
         <div class="word-cloud">
-          {% if results.most_common_words %} {% for word, freq in
-          results.most_common_words %}
-          <span class="word-tag">{{ word }}: {{ freq }}</span>
-          {% endfor %} {% else %}
+          
           <p>No word frequency data available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -963,30 +956,30 @@
       <div class="card" draggable="true">
         <h2>Top Links</h2>
         <ul class="links-list">
-          {% for link, count in results.links.items() %}
+          
           <li>
-            <a href="{{ link }}" target="_blank">{{ link }}</a>
+            <a href="http://example.com" target="_blank">http://example.com</a>
           </li>
-          {% endfor %}
+          
         </ul>
       </div>
 
       <!-- First Message Card -->
       <div class="card" draggable="true">
         <h2>First Message</h2>
-        <p>{{ results.first_message_date.strftime('%d %B %Y') }}</p>
+        <p>01 January 2023</p>
       </div>
 
       <!-- Last Message Card -->
       <div class="card" draggable="true">
         <h2>Last Message</h2>
-        <p>{{ results.last_message_date.strftime('%d %B %Y') }}</p>
+        <p>31 December 2023</p>
       </div>
 
       <!-- Average Messages Per Day Card -->
       <div class="card" draggable="true">
         <h2>Average Messages Per Day</h2>
-        <p>{{ results.avg_messages_per_day|round }}</p>
+        <p>26.0</p>
       </div>
     </div>
 
@@ -998,18 +991,17 @@
 
     <!-- Emoji Highlight Section -->
     <div class="emoji-highlight">
-      {% if results.emojis and results.emojis.items()|length > 0 %} {% for
-      emoji, count in results.emojis.items() %} {% if loop.index <= 5 %}
-      <div class="emoji-highlight-item">
-        <div class="emoji-bubble">{{ emoji }}</div>
-        <div class="emoji-count-large">{{ count }}</div>
-      </div>
-      {% endif %} {% endfor %} {% else %}
+        
       <div class="emoji-highlight-item">
         <div class="emoji-bubble">😊</div>
-        <div class="emoji-count-large">No top emojis data</div>
+        <div class="emoji-count-large">10</div>
       </div>
-      {% endif %}
+        
+      <div class="emoji-highlight-item">
+        <div class="emoji-bubble">👍</div>
+        <div class="emoji-count-large">5</div>
+      </div>
+        
     </div>
 
     <div class="grid-container">
@@ -1017,74 +1009,34 @@
       <div class="card" draggable="true">
         <h2>Top Emojis</h2>
         <div class="emoji-cloud">
-          {% if results.emojis and results.emojis.items()|length > 0 %} {% for
-          emoji, count in results.emojis.items() %}
+           
           <span class="emoji-tag"
-            >{{ emoji }} <span class="emoji-count">{{ count }}</span></span
+            >😊 <span class="emoji-count">10</span></span
           >
-          {% endfor %} {% else %}
-          <p>No emoji data available</p>
-          {% endif %}
+          
+          <span class="emoji-tag"
+            >👍 <span class="emoji-count">5</span></span
+          >
+           
         </div>
       </div>
 
       <!-- Overall Emoji Stats Card -->
       <div class="card" draggable="true">
         <h2>Overall Emoji Stats</h2>
-        {% if results.emoji_usage %}
-        <div class="overall-emoji-stats">
-          <p>
-            <span class="stat-label">Total Emojis:</span> {{
-            results.emoji_usage.total_emoji_count }}
-          </p>
-          <p>
-            <span class="stat-label">Messages with Emojis:</span> {{
-            results.emoji_usage.messages_with_emojis }}
-          </p>
-          <p>
-            <span class="stat-label">Emoji Percentage:</span> {{
-            results.emoji_usage.emoji_percentage|round(1) }}% of messages
-          </p>
-        </div>
-        {% else %}
+        
         <p>No emoji usage data available</p>
-        {% endif %}
+        
       </div>
 
       <!-- Emoji Usage By Sender Card -->
       <div class="card" draggable="true">
         <h2>Emoji Usage By Sender</h2>
-        {% if results.is_group %}
+        
         <p class="info-text">Showing emoji usage for top 5 participants only</p>
-        {% endif %} {% if results.emoji_stats_by_sender and
-        results.emoji_stats_by_sender.items()|length > 0 %}
-        <div class="emoji-stats">
-          {% for sender, stats in results.emoji_stats_by_sender.items() %}
-          <div class="sender-emoji-stats">
-            <h3>{{ sender }}</h3>
-            <p>Total emojis: {{ stats.total_emoji_count }}</p>
-            <p>Avg per message: {{ stats.avg_emojis_per_message|round(2) }}</p>
-            <p>
-              Messages with emojis: {{ stats.messages_with_emojis }} ({{
-              stats.emoji_percentage|round(1) }}%)
-            </p>
-            {% if stats.favorite_emojis %}
-            <p>Favorite emojis:</p>
-            <div class="favorite-emojis">
-              {% for emoji_data in stats.favorite_emojis %}
-              <span class="emoji-tag"
-                >{{ emoji_data[0] }}
-                <span class="emoji-count">{{ emoji_data[1] }}</span></span
-              >
-              {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
+         
         <p>No emoji usage data available</p>
-        {% endif %}
+        
       </div>
     </div>
 
@@ -1096,156 +1048,113 @@
 
     <!-- Media Highlight Section -->
     <div class="emoji-highlight">
-      {% if results.media_analysis and results.media_analysis.media_by_type %}
-      {% set media_types = { 'image': '📷', 'video': '🎬', 'audio': '🎵',
-      'voice_call': '📞', 'video_call': '📹', 'missed_voice_call': '📞❌',
-      'missed_video_call': '📹❌' } %} {% for media_type, count in
-      results.media_analysis.media_by_type.items() %} {% if loop.index <= 5 %}
+      
+        
       <div class="emoji-highlight-item">
-        <div class="emoji-bubble">{{ media_types.get(media_type, '📁') }}</div>
-        <div class="emoji-count-large">{{ count }}</div>
+        <div class="emoji-bubble">📷</div>
+        <div class="emoji-count-large">30</div>
       </div>
-      {% endif %} {% endfor %} {% else %}
+        
       <div class="emoji-highlight-item">
-        <div class="emoji-bubble">📁</div>
-        <div class="emoji-count-large">No media data</div>
+        <div class="emoji-bubble">🎬</div>
+        <div class="emoji-count-large">15</div>
       </div>
-      {% endif %}
+        
+      <div class="emoji-highlight-item">
+        <div class="emoji-bubble">🎵</div>
+        <div class="emoji-count-large">5</div>
+      </div>
+        
     </div>
 
     <div class="grid-container">
       <!-- Media Overview Card -->
       <div class="card" draggable="true">
         <h2>Media Overview</h2>
-        {% if results.media_analysis %}
+        
         <div class="overall-emoji-stats">
           <p>
             <span class="stat-label">Total Media Items:</span>
-            {{ results.media_analysis.total_media_count }}
+            50
           </p>
           <p>
             <span class="stat-label">Images Shared:</span>
-            {{ results.media_analysis.media_by_type.get('image', 0) }}
+            30
           </p>
           <p>
             <span class="stat-label">Videos Shared:</span>
-            {{ results.media_analysis.media_by_type.get('video', 0) }}
+            15
           </p>
           <p>
             <span class="stat-label">Audio Messages:</span>
-            {{ results.media_analysis.media_by_type.get('audio', 0) }}
+            5
           </p>
         </div>
-        {% else %}
-        <p>No media data available</p>
-        {% endif %}
+        
       </div>
 
       <!-- Call Statistics Card -->
       <div class="card" draggable="true">
         <h2>Call Statistics</h2>
-        {% if results.media_analysis %}
+        
         <div class="overall-emoji-stats">
           <p>
             <span class="stat-label">Voice Calls:</span>
-            {{ results.media_analysis.media_by_type.get('voice_call', 0) }}
+            0
           </p>
           <p>
             <span class="stat-label">Video Calls:</span>
-            {{ results.media_analysis.media_by_type.get('video_call', 0) }}
+            0
           </p>
           <p>
             <span class="stat-label">Missed Voice Calls:</span>
-            {{ results.media_analysis.media_by_type.get('missed_voice_call', 0)
-            }}
+            0
           </p>
           <p>
             <span class="stat-label">Missed Video Calls:</span>
-            {{ results.media_analysis.media_by_type.get('missed_video_call', 0)
-            }}
+            0
           </p>
         </div>
-        {% else %}
-        <p>No call data available</p>
-        {% endif %}
+        
       </div>
 
       <!-- Call Duration Card -->
       <div class="card" draggable="true">
         <h2>Call Duration</h2>
-        {% if results.media_analysis and results.media_analysis.call_duration %}
-        <div class="overall-emoji-stats">
-          {% for call_type, duration_data in
-          results.media_analysis.call_duration.items() %}
-          <p>
-            <span class="stat-label">{{ call_type|title }} Calls:</span>
-            {{ duration_data.call_count }} calls
-          </p>
-          <p>
-            <span class="stat-label">Total Duration:</span>
-            {{ (duration_data.total_duration / 60)|round(1) }} minutes
-          </p>
-          <p>
-            <span class="stat-label">Average Duration:</span>
-            {{ (duration_data.avg_duration / 60)|round(1) }} minutes
-          </p>
-          <p>
-            <span class="stat-label">Longest Call:</span>
-            {{ (duration_data.max_duration / 60)|round(1) }} minutes
-          </p>
-          {% endfor %}
-        </div>
-        {% else %}
+        
         <p>No call duration data available</p>
-        {% endif %}
+        
       </div>
 
       <!-- Media by Sender Card -->
       <div class="card" draggable="true">
         <h2>Top Media Sharers</h2>
-        {% if results.media_analysis and results.media_analysis.media_by_sender
-        %}
-        <ol class="message-list">
-          {% for sender, media_data in
-          results.media_analysis.media_by_sender.items() %} {% if loop.index <=
-          5 %} {% set total_media = 0 %} {% for media_type, count in
-          media_data.items() %} {% set total_media = total_media + count %} {%
-          endfor %}
-          <li>{{ sender }}: {{ total_media }} media items</li>
-          {% endif %} {% endfor %}
-        </ol>
-        {% else %}
+        
         <p>No media by sender data available</p>
-        {% endif %}
+        
       </div>
 
       <!-- Media Sharing Patterns Card -->
       <div class="card" draggable="true">
         <h2>Media Sharing Patterns</h2>
-        {% if results.media_analysis and
-        results.media_analysis.media_sharing_patterns %}
+        
         <div class="overall-emoji-stats">
           <p>
             <span class="stat-label">Total Media Count:</span>
-            {{ results.media_analysis.media_sharing_patterns.total_media_count
-            }}
+            50
           </p>
-          {% if
-          results.media_analysis.media_sharing_patterns.most_shared_media_type
-          %}
+          
           <p>
             <span class="stat-label">Most Shared Media:</span>
-            {% for sender, data in
-            results.media_analysis.media_sharing_patterns.most_shared_media_type.items()
-            %} {% if loop.index <= 3 %}
-            <br />{{ sender }}: {{ data.type }} ({{ data.count }}) {% endif %}
-            {% endfor %}
+             
+            <br />User1: image (20) 
+             
+            <br />User2: video (10) 
+            
           </p>
-          {% endif %}
+          
         </div>
-        {% else %}
-        <p>No media sharing patterns data available</p>
-        {% endif %}
+        
       </div>
     </div>
 
@@ -1258,91 +1167,81 @@
     <div class="visualization">
       <!-- Word Cloud -->
       <div class="chart-wrapper">
-        <h2>Word Cloud</h2>
+        <h2>Frequently Used Words</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.wordcloud %}
           <img
-            src="{{ results.visualization_paths.wordcloud }}"
+            src="/visuals/user123/wordcloud.png"
             alt="Word Cloud"
           />
-          {% else %}
-          <p>No word cloud visualization available</p>
-          {% endif %}
         </div>
       </div>
 
-      <!-- Average Messages Per Day -->
+      <!-- Average Messages -->
       <div class="chart-wrapper">
-        <h2>Average Messages Per Day</h2>
+        <h2>Average Messages Sent per Day</h2>
+        
+        <p class="info-text">Showing data for top 20 participants only</p>
+        
         <div class="chart-container">
-          {% if results.visualization_paths.average_messages_per_day %}
           <img
-            src="{{ results.visualization_paths.average_messages_per_day }}"
-            alt="Average Messages Per Day"
+            src="/visuals/user123/average_messages_per_day.png"
+            alt="Average Messages Sent per Day"
           />
-          {% else %}
-          <p>No average messages per day visualization available</p>
-          {% endif %}
         </div>
       </div>
 
       <!-- First Message Sender -->
       <div class="chart-wrapper">
         <h2>First Message Sender</h2>
+        
+        <p class="info-text">Showing data for top 20 participants only</p>
+        
         <div class="chart-container">
-          {% if results.visualization_paths.first_message_sender %}
           <img
-            src="{{ results.visualization_paths.first_message_sender }}"
+            src="/visuals/user123/first_message_sender.png"
             alt="First Message Sender"
           />
-          {% else %}
-          <p>No first message sender visualization available</p>
-          {% endif %}
         </div>
       </div>
 
-      <!-- Emoji Usage by Sender -->
+      <!-- Emoji Usage -->
       <div class="chart-wrapper">
         <h2>Emoji Usage by Sender</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.emoji_usage_by_sender %}
+          
           <img
-            src="{{ results.visualization_paths.emoji_usage_by_sender }}"
+            src="/visuals/user123/emoji_usage_by_sender.png"
             alt="Emoji Usage by Sender"
           />
-          {% else %}
-          <p>No emoji usage visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
-      <!-- Sentiment Analysis -->
+      <!-- Sentiment Counts -->
       <div class="chart-wrapper">
-        <h2>Sentiment Analysis</h2>
+        <h2>Sentiment Counts</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.sentiment_counts %}
           <img
-            src="{{ results.visualization_paths.sentiment_counts }}"
-            alt="Sentiment Analysis"
+            src="/visuals/user123/sentiment_counts.png"
+            alt="Sentiment Counts"
           />
-          {% else %}
-          <p>No sentiment analysis visualization available</p>
-          {% endif %}
         </div>
       </div>
 
-      <!-- Links Shared by Sender -->
+      <!-- Links Shared -->
       <div class="chart-wrapper">
-        <h2>Links Shared by Sender</h2>
+        <h2>Links Shared by Each Sender</h2>
+        
+        <p class="info-text">Showing data for top 20 participants only</p>
+        
         <div class="chart-container">
-          {% if results.visualization_paths.links_shared_by_sender %}
           <img
-            src="{{ results.visualization_paths.links_shared_by_sender }}"
-            alt="Links Shared by Sender"
+            src="/visuals/user123/links_shared_by_sender.png"
+            alt="Links Shared by Each Sender"
+            style="transition: transform 0.2s ease; cursor: zoom-in"
+            onmouseover="this.style.transform='scale(1.05)'"
+            onmouseout="this.style.transform='scale(1)'"
           />
-          {% else %}
-          <p>No links shared visualization available</p>
-          {% endif %}
         </div>
       </div>
 
@@ -1350,29 +1249,26 @@
       <div class="chart-wrapper">
         <h2>Top Emojis</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.top_emojis %}
+          
           <img
-            src="{{ results.visualization_paths.top_emojis }}"
+            src="/visuals/user123/top_emojis.png"
             alt="Top Emojis"
           />
-          {% else %}
-          <p>No top emojis visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
-      <!-- Messages Count Per Sender -->
+      <!-- Messages per User -->
       <div class="chart-wrapper">
         <h2>Messages sent per user</h2>
+        
+        <p class="info-text">Showing data for top 20 participants only</p>
+        
         <div class="chart-container">
-          {% if results.visualization_paths.messages_count_per_sender %}
           <img
-            src="{{ results.visualization_paths.messages_count_per_sender }}"
-            alt="Messages Count Per Sender"
+            src="/visuals/user123/messages_count_per_sender.png"
+            alt="Total messages per user"
           />
-          {% else %}
-          <p>No messages count per sender visualization available</p>
-          {% endif %}
         </div>
       </div>
 
@@ -1380,14 +1276,10 @@
       <div class="chart-wrapper">
         <h2>Message Activity Over Time</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.message_activity_over_time %}
           <img
-            src="{{ results.visualization_paths.message_activity_over_time }}"
+            src="/visuals/user123/message_activity_over_time.png"
             alt="Message Activity Over Time"
           />
-          {% else %}
-          <p>No message activity over time visualization available</p>
-          {% endif %}
         </div>
       </div>
 
@@ -1395,29 +1287,24 @@
       <div class="chart-wrapper">
         <h2>Message Activity Heatmap</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.message_activity_heatmap %}
           <img
-            src="{{ results.visualization_paths.message_activity_heatmap }}"
+            src="/visuals/user123/message_activity_heatmap.png"
             alt="Message Activity Heatmap"
           />
-          {% else %}
-          <p>No message activity heatmap visualization available</p>
-          {% endif %}
         </div>
       </div>
 
-      <!-- Message Length Distribution -->
+      <!-- Message Length -->
       <div class="chart-wrapper">
         <h2>Message Length</h2>
+        
+        <p class="info-text">Showing data for top 20 participants only</p>
+        
         <div class="chart-container">
-          {% if results.visualization_paths.message_length_distribution %}
           <img
-            src="{{ results.visualization_paths.message_length_distribution }}"
+            src="/visuals/user123/message_length_distribution.png"
             alt="Message Length"
           />
-          {% else %}
-          <p>No message length distribution visualization available</p>
-          {% endif %}
         </div>
       </div>
 
@@ -1425,45 +1312,36 @@
       <div class="chart-wrapper">
         <h2>Response Time Distribution</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.response_time_distribution %}
           <img
-            src="{{ results.visualization_paths.response_time_distribution }}"
+            src="/visuals/user123/response_time_distribution.png"
             alt="Response Time Distribution"
           />
-          {% else %}
-          <p>No response time distribution visualization available</p>
-          {% endif %}
         </div>
       </div>
 
       <!-- Daily Pattern -->
       <div class="chart-wrapper">
         <h2>Daily Message Pattern</h2>
+        
+        <p class="info-text">Showing data for top 20 participants only</p>
+        
         <div class="chart-container">
-          {% if results.visualization_paths.daily_pattern %}
           <img
-            src="{{ results.visualization_paths.daily_pattern }}"
+            src="/visuals/user123/daily_pattern.png"
             alt="Daily Message Pattern"
           />
-          {% else %}
-          <p>No daily message pattern visualization available</p>
-          {% endif %}
         </div>
       </div>
 
-      {% if results.is_group %}
+      
       <!-- Group Participation -->
       <div class="chart-wrapper">
         <h2>Group Participation Distribution</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.group_participation %}
           <img
-            src="{{ results.visualization_paths.group_participation }}"
+            src="/visuals/user123/group_participation.png"
             alt="Group Participation Distribution"
           />
-          {% else %}
-          <p>No group participation visualization available</p>
-          {% endif %}
         </div>
       </div>
 
@@ -1471,32 +1349,13 @@
       <div class="chart-wrapper">
         <h2>Group Interaction Network</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.group_interaction_network %}
           <img
-            src="{{ results.visualization_paths.group_interaction_network }}"
+            src="/visuals/user123/group_interaction_network.png"
             alt="Group Interaction Network"
           />
-          {% else %}
-          <p>No group interaction network visualization available</p>
-          {% endif %}
         </div>
       </div>
-      {% else %}
-      <!-- Conversation Flow -->
-      <div class="chart-wrapper">
-        <h2>Conversation Flow Analysis</h2>
-        <div class="chart-container">
-          {% if results.visualization_paths.conversation_flow %}
-          <img
-            src="{{ results.visualization_paths.conversation_flow }}"
-            alt="Conversation Flow Analysis"
-          />
-          {% else %}
-          <p>No conversation flow visualization available</p>
-          {% endif %}
-        </div>
-      </div>
-      {% endif %}
+      
 
       <!-- Media Visualizations Section -->
       <div class="section-header">
@@ -1508,14 +1367,12 @@
       <div class="chart-wrapper">
         <h2>Media Dashboard</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.media_dashboard %}
+          
           <img
-            src="{{ results.visualization_paths.media_dashboard }}"
+            src="/visuals/user123/media_dashboard.png"
             alt="Media Dashboard"
           />
-          {% else %}
-          <p>No media dashboard visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1523,14 +1380,12 @@
       <div class="chart-wrapper">
         <h2>Media Types Distribution</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.media_types_distribution %}
+          
           <img
-            src="{{ results.visualization_paths.media_types_distribution }}"
+            src="/visuals/user123/media_types_distribution.png"
             alt="Media Types Distribution"
           />
-          {% else %}
-          <p>No media types distribution visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1538,14 +1393,12 @@
       <div class="chart-wrapper">
         <h2>Media Sharing by Sender</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.media_by_sender %}
+          
           <img
-            src="{{ results.visualization_paths.media_by_sender }}"
+            src="/visuals/user123/media_by_sender.png"
             alt="Media Sharing by Sender"
           />
-          {% else %}
-          <p>No media sharing by sender visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1553,14 +1406,12 @@
       <div class="chart-wrapper">
         <h2>Media Sharing Over Time</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.media_over_time %}
+          
           <img
-            src="{{ results.visualization_paths.media_over_time }}"
+            src="/visuals/user123/media_over_time.png"
             alt="Media Sharing Over Time"
           />
-          {% else %}
-          <p>No media sharing over time visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1568,14 +1419,12 @@
       <div class="chart-wrapper">
         <h2>Call Patterns Analysis</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.call_patterns %}
+          
           <img
-            src="{{ results.visualization_paths.call_patterns }}"
+            src="/visuals/user123/call_patterns.png"
             alt="Call Patterns Analysis"
           />
-          {% else %}
-          <p>No call patterns visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1583,14 +1432,12 @@
       <div class="chart-wrapper">
         <h2>Call Duration by Type</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.call_duration_by_type %}
+          
           <img
-            src="{{ results.visualization_paths.call_duration_by_type }}"
+            src="/visuals/user123/call_duration_by_type.png"
             alt="Call Duration by Type"
           />
-          {% else %}
-          <p>No call duration visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1598,14 +1445,12 @@
       <div class="chart-wrapper">
         <h2>Average Call Duration by Type</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.avg_call_duration_by_type %}
+          
           <img
-            src="{{ results.visualization_paths.avg_call_duration_by_type }}"
+            src="/visuals/user123/avg_call_duration_by_type.png"
             alt="Average Call Duration by Type"
           />
-          {% else %}
-          <p>No average call duration visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
 
@@ -1613,14 +1458,12 @@
       <div class="chart-wrapper">
         <h2>Media Sharing Patterns</h2>
         <div class="chart-container">
-          {% if results.visualization_paths.media_sharing_patterns %}
+          
           <img
-            src="{{ results.visualization_paths.media_sharing_patterns }}"
+            src="/visuals/user123/media_sharing_patterns.png"
             alt="Media Sharing Patterns"
           />
-          {% else %}
-          <p>No media sharing patterns visualization available</p>
-          {% endif %}
+          
         </div>
       </div>
     </div>
