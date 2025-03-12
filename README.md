@@ -1,5 +1,3 @@
-# ChatInsight
-
 <div align="center">
   <img src="https://img.shields.io/badge/ChatInsight-WhatsApp_Analytics_Platform-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="ChatInsight" width="600">
   <br>
