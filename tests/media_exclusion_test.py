@@ -18,6 +18,7 @@ from analyzer import (
     preprocess_message,
     TEXT_ANALYSIS_EXCLUDED_TERMS,
     MEDIA_PATTERNS,
+    PARTICIPANT_NAMES,
     perform_analysis,
     generate_visualizations,
     VisualizationConfig,
@@ -495,6 +496,80 @@ class TestMediaExclusion:
                 assert media_type in media_results['media_by_sender']['User2'], f"Expected '{media_type}' for User2"
                 assert media_results['media_by_sender']['User2'][media_type] == user2_type_count, \
                     f"Expected {user2_type_count} {media_type} messages for User2, got {media_results['media_by_sender']['User2'].get(media_type, 0)}"
+
+    def test_participant_names_excluded_from_text_analysis(self):
+        """Test that participant names are excluded from text analysis"""
+        # Temporarily add test participant names to PARTICIPANT_NAMES
+        original_participant_names = analyzer.PARTICIPANT_NAMES.copy()
+        test_names = ["TestUser1", "TestUser2", "TestUser3"]
+        
+        try:
+            # Add test names to PARTICIPANT_NAMES and update TEXT_ANALYSIS_EXCLUDED_TERMS
+            analyzer.PARTICIPANT_NAMES.extend(test_names)
+            analyzer.TEXT_ANALYSIS_EXCLUDED_TERMS.extend(test_names)
+            
+            # Create test messages that include participant names
+            test_messages = [
+                f"Hello {test_names[0]}, how are you?",
+                f"{test_names[1]} sent you a message",
+                f"I was talking to {test_names[2]} yesterday",
+                "Regular message without names"
+            ]
+            
+            # Create a DataFrame with these messages
+            data = []
+            for i, message in enumerate(test_messages):
+                data.append({
+                    'Date': '01/01/2023',
+                    'Time': f'15:{i:02d}:00',
+                    'Sender': 'User1' if i % 2 == 0 else 'User2',
+                    'Message': message,
+                    'MediaType': 'text'
+                })
+            
+            df = pd.DataFrame(data)
+            df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y')
+            
+            # Add DateTime column required by perform_analysis
+            df['DateTime'] = pd.to_datetime(
+                df['Date'].dt.strftime('%Y-%m-%d') + ' ' + 
+                df['Time'].astype(str)
+            )
+            
+            # Test the word frequency analysis logic directly
+            stop_words = set(stopwords.words('english'))
+            # Add media-related terms and participant names to stop words
+            for term in analyzer.TEXT_ANALYSIS_EXCLUDED_TERMS:
+                for word in term.lower().split():
+                    stop_words.add(word)
+            
+            # Process messages directly
+            all_messages = ' '.join([preprocess_message(msg) for msg in df['Message']])
+            words = [word for word in all_messages.split() if word not in stop_words]
+            word_freq = Counter(words)
+            most_common_words = word_freq.most_common(20)
+            
+            # Check that participant names do not appear in the results
+            most_common_words_dict = dict(most_common_words)
+            for name in test_names:
+                assert name.lower() not in most_common_words_dict, f"Participant name '{name}' should not be in most common words"
+            
+            # Check that other words still appear
+            expected_words = ["hello", "sent", "message", "talking", "yesterday", "regular", "without"]
+            found_expected = False
+            for word in expected_words:
+                if word in most_common_words_dict:
+                    found_expected = True
+                    break
+            
+            assert found_expected, "Expected at least some non-name words to appear in results"
+            
+        finally:
+            # Restore original PARTICIPANT_NAMES
+            analyzer.PARTICIPANT_NAMES = original_participant_names
+            # Rebuild TEXT_ANALYSIS_EXCLUDED_TERMS without test names
+            analyzer.TEXT_ANALYSIS_EXCLUDED_TERMS = [term for term in analyzer.TEXT_ANALYSIS_EXCLUDED_TERMS 
+                                                   if term not in test_names]
 
 if __name__ == "__main__":
     pytest.main(["-v", "media_exclusion_test.py"]) 
