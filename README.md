@@ -9,7 +9,9 @@
   </p>
 </div>
 
-**ChatInsight** is a web application designed to analyze WhatsApp chat data and provide detailed insights through visualizations. This tool allows users to upload their WhatsApp chat export files and instantly receive analysis results, including message counts, active days and times, commonly used words, and more.
+**ChatInsight** is a web application designed to analyze WhatsApp chat data and provide detailed insights through visualizations. This tool allows users to upload their WhatsApp chat export files and instantly receive analysis results, including message counts, active days and times, commonly used words, and more. 
+
+URL: https://chatinsights.app/
 
 ## Features
 
