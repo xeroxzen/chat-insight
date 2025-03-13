@@ -9,7 +9,7 @@
   </p>
 </div>
 
-**ChatInsight** is a web application designed to analyze WhatsApp chat data and provide detailed insights through visualizations. This tool allows users to upload their WhatsApp chat export files and instantly receive analysis results, including message counts, active days and times, commonly used words, and more. 
+**ChatInsight** is a web application designed to analyze WhatsApp chat data and provide detailed insights through visualizations. This tool allows users to upload their WhatsApp chat export files and instantly receive analysis results, including message counts, active days and times, commonly used words, and more.
 
 URL: https://chatinsights.app/
 
@@ -225,3 +225,76 @@ This project is licensed under the Apache License 2.0. See the [Apache License 2
 </div>
 
 ---
+
+# WhatsApp Chat Parser
+
+A Python tool for parsing WhatsApp chat exports into structured CSV data for analysis.
+
+## Features
+
+- Supports multiple WhatsApp chat export formats:
+  - Bracketed format: `[DD/MM/YYYY, HH:MM:SS] Sender: Message`
+  - Non-bracketed format: `DD/MM/YYYY, HH:MM - Sender: Message`
+- Handles various date formats (EU, US, ISO)
+- Detects media types (images, videos, audio, stickers)
+- Identifies call information (voice calls, video calls, missed calls)
+- Processes multiline messages
+- Skips system messages
+
+## Requirements
+
+- Python 3.6+
+- pandas
+
+## Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+```python
+from parser import parse_chat_log
+
+# Parse a WhatsApp chat export
+parse_chat_log('path/to/chat.txt', 'output.csv')
+```
+
+## Running Tests
+
+The test suite covers various scenarios including different date formats, message types, and edge cases.
+
+### Run All Tests
+
+To run all tests in the project:
+
+```bash
+# Run all tests in the tests/ directory
+./run_all_tests.py
+```
+
+### Run Specific Tests
+
+To run specific tests:
+
+```bash
+# Run only the WhatsApp parser tests
+python run_tests.py
+
+# Run a specific test case
+python -m unittest tests.test_parser.TestWhatsAppParser.test_real_world_example
+```
+
+## Troubleshooting
+
+If you encounter the "No messages were successfully parsed from the file" error:
+
+1. Check that your file is a valid WhatsApp chat export
+2. Verify the file encoding (the parser tries multiple encodings)
+3. Ensure the chat format matches one of the supported formats
+4. Check if the file contains only system messages
+
+## License
+
+MIT

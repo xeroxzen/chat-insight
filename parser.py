@@ -37,6 +37,8 @@ DATE_FORMATS = [
     # Formats without seconds
     {'pattern': '%d/%m/%Y, %H:%M', 'regex': r'\d{1,2}/\d{1,2}/\d{4}, \d{1,2}:\d{2}'},
     {'pattern': '%m/%d/%Y, %H:%M', 'regex': r'\d{1,2}/\d{1,2}/\d{4}, \d{1,2}:\d{2}'},
+    # WhatsApp format without brackets (seen in error log)
+    {'pattern': '%d/%m/%Y, %H:%M', 'regex': r'\d{1,2}/\d{1,2}/\d{4}, \d{1,2}:\d{2}'},
 ]
 
 def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
@@ -74,10 +76,24 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
         
         logger.info("Read %d lines from %s", len(lines), txt_file_path)
         
-        # Detect date format from the first few lines
+        # Determine if the chat format uses brackets or not
+        has_brackets = False
+        no_brackets = False
         date_format = None
-        for i in range(min(20, len(lines))):
-            if lines[i].strip() and lines[i].startswith('['):
+        
+        # Check the first 20 non-empty lines to determine format
+        checked_lines = 0
+        for i in range(min(100, len(lines))):
+            if not lines[i].strip():
+                continue
+                
+            checked_lines += 1
+            if checked_lines > 20:
+                break
+                
+            # Check for bracketed format: [DD/MM/YYYY, HH:MM]
+            if lines[i].startswith('['):
+                has_brackets = True
                 try:
                     datetime_str = lines[i][1:lines[i].index(']')]
                     for fmt in DATE_FORMATS:
@@ -85,7 +101,7 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
                             try:
                                 datetime.strptime(datetime_str, fmt['pattern'])
                                 date_format = fmt['pattern']
-                                logger.info(f"Detected date format: {date_format}")
+                                logger.info(f"Detected bracketed date format: {date_format}")
                                 break
                             except ValueError:
                                 continue
@@ -93,10 +109,32 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
                         break
                 except (ValueError, IndexError):
                     continue
+            
+            # Check for non-bracketed format: DD/MM/YYYY, HH:MM - 
+            elif re.match(r'\d{1,2}/\d{1,2}/\d{4}, \d{1,2}:\d{2}', lines[i]):
+                no_brackets = True
+                try:
+                    # Extract date/time part (before the " - ")
+                    parts = lines[i].split(' - ', 1)
+                    if len(parts) >= 1:
+                        datetime_str = parts[0].strip()
+                        for fmt in DATE_FORMATS:
+                            if re.match(fmt['regex'], datetime_str):
+                                try:
+                                    datetime.strptime(datetime_str, fmt['pattern'])
+                                    date_format = fmt['pattern']
+                                    logger.info(f"Detected non-bracketed date format: {date_format}")
+                                    break
+                                except ValueError:
+                                    continue
+                        if date_format:
+                            break
+                except (ValueError, IndexError):
+                    continue
         
         if not date_format:
             # Sample the first few lines for debugging
-            sample_lines = "\n".join(lines[:10])
+            sample_lines = "\n".join(lines[:20])
             logger.error(f"Could not detect date format. Sample of file content:\n{sample_lines}")
             raise ValueError("Could not detect the date format in the chat log. Please check if this is a valid WhatsApp chat export.")
         
@@ -121,8 +159,15 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
         
         for i, line in enumerate(lines):
             try:
-                # Expected format: [DATE_TIME] Sender: Message
-                if line.strip() and line.startswith('['):
+                # Check if this is a new message line
+                is_new_message = False
+                
+                if has_brackets and line.strip() and line.startswith('['):
+                    is_new_message = True
+                elif no_brackets and re.match(r'\d{1,2}/\d{1,2}/\d{4}, \d{1,2}:\d{2}', line):
+                    is_new_message = True
+                
+                if is_new_message:
                     # If we have a message in progress, save it first
                     if current_message and current_sender and current_date and current_time:
                         # Detect media type with case-insensitive matching
@@ -148,9 +193,20 @@ def parse_chat_log(txt_file_path: str, csv_file_path: str) -> None:
                     
                     # Start a new message
                     try:
-                        # Splitting datetime and message content
-                        datetime_str = line[1:line.index(']')]
-                        content = line[line.index(']')+2:]
+                        if has_brackets:
+                            # Bracketed format: [DD/MM/YYYY, HH:MM] Sender: Message
+                            datetime_str = line[1:line.index(']')]
+                            content = line[line.index(']')+2:]
+                        else:
+                            # Non-bracketed format: DD/MM/YYYY, HH:MM - Sender: Message
+                            parts = line.split(' - ', 1)
+                            if len(parts) < 2:
+                                logger.debug(f"Skipping invalid line format at line {i+1}: {line.strip()}")
+                                skipped_lines += 1
+                                continue
+                                
+                            datetime_str = parts[0].strip()
+                            content = parts[1].strip()
                         
                         # Parsing datetime with detected format
                         date_time = datetime.strptime(datetime_str, date_format)
