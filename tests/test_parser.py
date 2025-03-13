@@ -69,8 +69,8 @@ class TestWhatsAppParser(unittest.TestCase):
     
     def test_us_date_format(self):
         """Test parsing chat with US date format: MM/DD/YYYY, HH:MM"""
-        chat_content = """[05/01/2023, 10:15:30] John Doe: Hello there!
-[05/01/2023, 10:16:45] Jane Smith: Hi John, how are you?
+        chat_content = """[05/01/2023, 10:15:30] Google Jr: Hello there!
+[05/01/2023, 10:16:45] Alina: Hi Google Jr, how are you?
 """
         input_file = self.create_test_file(chat_content)
         output_file = os.path.join(self.test_dir, "output.csv")
@@ -122,11 +122,11 @@ On multiple lines.
     
     def test_call_messages(self):
         """Test parsing chat with call messages"""
-        chat_content = """[01/05/2023, 10:15:30] John Doe: Voice call
-[01/05/2023, 10:16:45] Jane Smith: Video call
-[01/05/2023, 10:17:20] John Doe: Missed voice call, Tap to call back
-[01/05/2023, 10:18:05] Jane Smith: Missed video call, Tap to call back
-[01/05/2023, 10:19:10] John Doe: voice call (5:30)
+        chat_content = """[01/05/2023, 10:15:30] Google Jr: Voice call
+[01/05/2023, 10:16:45] Alina: Video call
+[01/05/2023, 10:17:20] Google Jr: Missed voice call, Tap to call back
+[01/05/2023, 10:18:05] Alina: Missed video call, Tap to call back
+[01/05/2023, 10:19:10] Google Jr: voice call (5:30)
 """
         input_file = self.create_test_file(chat_content)
         output_file = os.path.join(self.test_dir, "output.csv")
@@ -143,9 +143,9 @@ On multiple lines.
     def test_system_messages(self):
         """Test parsing chat with system messages"""
         chat_content = """[01/05/2023, 10:15:30] Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.
-[01/05/2023, 10:16:45] John Doe: Hello there!
-[01/05/2023, 10:17:20] Jane Smith changed the group description
-[01/05/2023, 10:18:05] Jane Smith: Hi John!
+[01/05/2023, 10:16:45] Google Jr: Hello there!
+[01/05/2023, 10:17:20] Alina changed the group description
+[01/05/2023, 10:18:05] Alina: Hi Google Jr!
 """
         input_file = self.create_test_file(chat_content)
         output_file = os.path.join(self.test_dir, "output.csv")
@@ -157,10 +157,10 @@ On multiple lines.
         # Update to match actual parser behavior - it's parsing 3 messages instead of 2
         self.assertEqual(len(df), 3)
         # Check that the actual user messages are included
-        self.assertTrue('John Doe' in df['Sender'].tolist())
-        self.assertTrue('Jane Smith' in df['Sender'].tolist())
+        self.assertTrue('Google Jr' in df['Sender'].tolist())
+        self.assertTrue('Alina' in df['Sender'].tolist())
         self.assertTrue('Hello there!' in df['Message'].tolist())
-        self.assertTrue('Hi John!' in df['Message'].tolist())
+        self.assertTrue('Hi Google Jr!' in df['Message'].tolist())
     
     def test_empty_file(self):
         """Test parsing an empty file"""
