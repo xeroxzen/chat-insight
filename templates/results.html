@@ -1879,31 +1879,25 @@
       }
 
       async function downloadAllVisuals() {
-        const images = document.querySelectorAll(".chart-container img");
-        let count = 0;
-
-        for (const img of images) {
-          try {
-            const title = img
-              .closest(".chart-container")
-              .previousElementSibling.textContent.trim();
-            const response = await fetch(img.src);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${title}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            count++;
-          } catch (error) {
-            console.error("Error downloading:", error);
+        try {
+          const response = await fetch("/download_results");
+          if (!response.ok) {
+            throw new Error("Failed to download visualizations.");
           }
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "{user_id}_visualizations.zip";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          showToast("Downloaded visualizations as a single ZIP file");
+        } catch (error) {
+          console.error("Error downloading ZIP:", error);
+          showToast("Unable to download visuals. Please try again.");
         }
-
-        showToast(`Downloaded ${count} visualizations`);
         toggleShareMenu();
       }
 
