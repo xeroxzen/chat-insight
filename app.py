@@ -437,6 +437,38 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             {"error": f"An unexpected error occurred: {str(e)}"}
         )
 
+import io
+import zipfile
+from fastapi.responses import StreamingResponse
+@app.get("/download_results")
+async def download_results(request: Request):
+    # Check session validity
+    if not session_manager.is_session_valid(request):
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    # Get user session and directories
+    session = session_manager.get_user_session(request)
+    user_id = session["user_id"]
+    user_dirs = session_manager.get_user_directories(user_id)
+    visuals_dir = user_dirs["visuals"]
+
+    # Create an in-memory ZIP file
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        # Loop through files in the visuals directory and add them to the ZIP
+        for file_path in visuals_dir.glob("*"):
+            if file_path.is_file():
+                zip_file.write(file_path, arcname=file_path.name)
+    zip_buffer.seek(0)
+
+    # Return the ZIP file as a StreamingResponse
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/x-zip-compressed",
+        headers={"Content-Disposition": f"attachment; filename={user_id}_results.zip"}
+    )
+
+
 @app.get("/debug/files/{user_id}")
 async def debug_files(request: Request, user_id: str):
     """Debug route to check the actual files in a user's directory."""
