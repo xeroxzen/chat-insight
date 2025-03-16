@@ -9,9 +9,14 @@ from unittest.mock import Mock, patch, mock_open
 from datetime import datetime
 import io
 from pathlib import Path
+import zipfile
+from starlette.middleware.sessions import SessionMiddleware
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import app, standardize_results
+
+# Add session middleware to the app for testing
+app.add_middleware(SessionMiddleware, secret_key="test_secret_key")
 
 client = TestClient(app)
 
@@ -125,7 +130,8 @@ def test_standardize_results():
     # Testing with empty data
     empty_data = {}
     standardized = standardize_results(empty_data)
-    assert standardized == {}
+    expected_empty_result = {"visualization_paths": {}}
+    assert standardized == expected_empty_result
 
 def test_allowed_file():
     """Test the allowed_file function directly"""
@@ -261,15 +267,103 @@ class TestResultsRoute:
         
         # Testing with invalid session
         with patch("app.session_manager.is_session_valid", return_value=False), \
-             patch("app.templates.TemplateResponse") as mock_template:
-            
-            # Setting up the mock to return a simple response
-            mock_template.return_value.status_code = 200
-            mock_template.return_value.headers = {"content-type": "text/html; charset=utf-8"}
-            mock_template.return_value.body = b"<html><body>Session expired</body></html>"
+             patch("app.session_manager.get_user_session", side_effect=HTTPException(status_code=401, detail="Session expired")):
             
             response = client.get("/results", params={"results": "{}"})
+            assert response.status_code == 200  # Due to the exception handler
+            assert "session has expired" in response.text.lower()
+
+class TestDownloadResults:
+    """Test the download_results endpoint"""
+
+    def test_successful_download(self):
+        """Test successful download of visualization results"""
+        # Create test files
+        test_user_id = "test_user"
+        test_visuals_dir = Path("static/visuals") / test_user_id
+        os.makedirs(test_visuals_dir, exist_ok=True)
+        test_files = ["test1.png", "test2.png"]
+        
+        try:
+            # Create some test files
+            for filename in test_files:
+                with open(test_visuals_dir / filename, "wb") as f:
+                    f.write(b"test content")
+
+            with patch("app.session_manager.is_session_valid", return_value=True), \
+                 patch("app.session_manager.get_user_session", return_value={"user_id": test_user_id}), \
+                 patch("app.session_manager.get_user_directories", return_value={"visuals": test_visuals_dir}):
+
+                response = client.get("/download_results")
+                
+                assert response.status_code == 200
+                assert response.headers["content-type"] == "application/x-zip-compressed"
+                assert response.headers["content-disposition"] == f'attachment; filename={test_user_id}_analysis_results.zip'
+                
+                # Verify the ZIP file contains our test files
+                zip_content = io.BytesIO(response.content)
+                with zipfile.ZipFile(zip_content) as zf:
+                    assert sorted(zf.namelist()) == sorted(test_files)
+                    
+        finally:
+            # Clean up test files
+            if os.path.exists(test_visuals_dir):
+                shutil.rmtree(test_visuals_dir)
+
+    def test_download_with_invalid_session(self):
+        """Test download attempt with invalid session"""
+        with patch("app.session_manager.is_session_valid", return_value=False), \
+             patch("app.session_manager.get_user_session", side_effect=HTTPException(status_code=401, detail="Session expired")):
+            
+            response = client.get("/download_results")
+            assert response.status_code == 200  # Due to the exception handler
+            assert "session has expired" in response.text.lower()
+
+    def test_download_with_empty_directory(self):
+        """Test download attempt with empty visuals directory"""
+        test_user_id = "test_user"
+        test_visuals_dir = Path("static/visuals") / test_user_id
+        os.makedirs(test_visuals_dir, exist_ok=True)
+
+        try:
+            with patch("app.session_manager.is_session_valid", return_value=True), \
+                 patch("app.session_manager.get_user_session", return_value={"user_id": test_user_id}), \
+                 patch("app.session_manager.get_user_directories", return_value={"visuals": test_visuals_dir}):
+
+                response = client.get("/download_results")
+                
+                assert response.status_code == 200
+                assert response.headers["content-type"] == "application/x-zip-compressed"
+                assert response.headers["content-disposition"] == f'attachment; filename={test_user_id}_analysis_results.zip'
+                
+                # Verify the ZIP file is empty
+                zip_content = io.BytesIO(response.content)
+                with zipfile.ZipFile(zip_content) as zf:
+                    assert len(zf.namelist()) == 0
+
+        finally:
+            if os.path.exists(test_visuals_dir):
+                shutil.rmtree(test_visuals_dir)
+
+    def test_download_with_nonexistent_directory(self):
+        """Test download attempt with non-existent visuals directory"""
+        test_user_id = "nonexistent_user"
+        test_visuals_dir = Path("static/visuals") / test_user_id
+
+        with patch("app.session_manager.is_session_valid", return_value=True), \
+             patch("app.session_manager.get_user_session", return_value={"user_id": test_user_id}), \
+             patch("app.session_manager.get_user_directories", return_value={"visuals": test_visuals_dir}):
+
+            response = client.get("/download_results")
+            
             assert response.status_code == 200
+            assert response.headers["content-type"] == "application/x-zip-compressed"
+            assert response.headers["content-disposition"] == f'attachment; filename={test_user_id}_analysis_results.zip'
+            
+            # Verify the ZIP file is empty
+            zip_content = io.BytesIO(response.content)
+            with zipfile.ZipFile(zip_content) as zf:
+                assert len(zf.namelist()) == 0
 
 class TestVisualsRoute:
     """Test the visuals route"""
