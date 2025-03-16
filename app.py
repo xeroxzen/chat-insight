@@ -10,6 +10,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from contextlib import asynccontextmanager
+import io
+import zipfile
+from fastapi.responses import StreamingResponse
 
 # Adding the current directory to Python path to avoid directory related errors
 sys.path.append(str(Path(__file__).parent))
@@ -193,11 +196,7 @@ async def index(request: Request):
 async def read_root(request: Request):
     # Checking session validity
     if not session_manager.is_session_valid(request):
-        return templates.TemplateResponse(
-            request,
-            "index.html",
-            {"error": "Your session has expired. Please upload your chat file again."}
-        )
+        raise HTTPException(status_code=401, detail="Session expired")
     
     # Checking rate limit
     if not rate_limiter.check_rate_limit(request):
@@ -437,9 +436,6 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
             {"error": f"An unexpected error occurred: {str(e)}"}
         )
 
-import io
-import zipfile
-from fastapi.responses import StreamingResponse
 @app.get("/download_results")
 async def download_results(request: Request):
     # Check session validity
@@ -465,7 +461,7 @@ async def download_results(request: Request):
     return StreamingResponse(
         zip_buffer,
         media_type="application/x-zip-compressed",
-        headers={"Content-Disposition": f"attachment; filename={user_id}_results.zip"}
+        headers={"Content-Disposition": f"attachment; filename={user_id}_analysis_results.zip"}
     )
 
 
