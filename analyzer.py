@@ -1753,10 +1753,7 @@ def analyze_chat_log(csv_file_path: str, output_dir: Optional[Path] = None) -> d
         # Adding media sharing patterns analysis
         media_patterns_results, _ = analyze_media_sharing_patterns(df, config)
         if media_patterns_results:
-            if 'media_analysis' not in analysis.media_analysis:
-                analysis.media_analysis['media_sharing_patterns'] = media_patterns_results
-            else:
-                analysis.media_analysis['media_sharing_patterns'] = media_patterns_results
+            analysis.media_analysis['media_sharing_patterns'] = media_patterns_results
         
         # Group-specific analysis
         if is_group:
