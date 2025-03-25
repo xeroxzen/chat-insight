@@ -297,4 +297,4 @@ If you encounter the "No messages were successfully parsed from the file" error:
 
 ## License
 
-MIT
+Apache License 2.0
