@@ -60,7 +60,10 @@ metadata:
   namespace: chat-insights
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: 10m
+    nginx.ingress.kubernetes.io/proxy-body-size: 10m        # Max upload size is 10MB
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"   # 5 mins to wait for a response
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"   # 5 mins to send data
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60" # 60s to establish a connection
 spec:
   ingressClassName: nginx
   rules:
